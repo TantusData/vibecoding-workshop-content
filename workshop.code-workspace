@@ -1,0 +1,26 @@
+{
+  "folders": [
+    { "name": "Projekt", "path": "../work/project" },
+    { "name": "Materiały", "path": "." }
+  ],
+  "settings": {
+    "files.exclude": {
+      "**/__pycache__": true,
+      "**/.pytest_cache": true,
+      "seed": true
+    },
+    "files.watcherExclude": {
+      "**/.git/objects/**": true,
+      "**/__pycache__/**": true,
+      "**/.pytest_cache/**": true,
+      "**/var/**": true,
+      "**/seed/**": true
+    },
+    "search.exclude": {
+      "**/var/**": true,
+      "seed": true
+    },
+    "terminal.integrated.cwd": "/home/coder/work/project",
+    "python.defaultInterpreterPath": "/opt/venv/bin/python"
+  }
+}

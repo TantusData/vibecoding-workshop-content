@@ -1,0 +1,6 @@
+__pycache__/
+.pytest_cache/
+# step materials: fetched by bin/krok from refs/steps/NN, never part of a clone
+/steps/
+/specs/
+/tests/[0-9]*/

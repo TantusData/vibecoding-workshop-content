@@ -1,0 +1,52 @@
+[project]
+name = "opscopilot"
+version = "0.1.0"
+description = "OpsCopilot — internal IT/OT assistant prototype for Nordfarm Foods (inherited prototype)"
+readme = "HANDOVER_NOTE.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+dependencies = [
+    # exact pins = what our code-server machines install into /opt/venv (Python 3.13). Change
+    # one here and the machines' startup script must change too: nobody can pip install there.
+    "typer==0.27.2",
+    "pydantic==2.13.5",
+    "pydantic-settings==2.15.0",
+    "python-dotenv==1.2.3",
+    "fastapi==0.141.1",
+    "uvicorn==0.52.4",
+    "mcp==1.30.0",
+    "httpx==0.28.1",  # the model gateway (chat + embeddings) and FastAPI's test client
+    "numpy==2.4.6",
+    # impact model (trained at first use into var/)
+    "scikit-learn==1.9.1",
+    "joblib",  # comes with scikit-learn
+]
+
+[project.scripts]
+opscopilot = "opscopilot.cli:app"
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "ruff>=0.8",
+    "pdoc>=15",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["opscopilot", "norddesk_mcp", "nordwiki_mcp"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["site", "var", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

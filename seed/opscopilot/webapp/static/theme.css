@@ -1,0 +1,18 @@
+/* theme.css — how YOUR OpsCopilot looks. This file is the project owner's: updates of the
+   application never overwrite it. Change the variables below, or add any CSS rules after them. The texts on the
+   page (name, tagline, welcome, placeholder) live in branding.json, next to this file. */
+:root {
+  --bg: #eeeeee;          /* page background */
+  --panel: #ffffff;       /* chat and trace panels */
+  --ink: #222222;         /* text */
+  --muted: #777777;       /* secondary text */
+  --line: #cccccc;        /* borders */
+  --bubble: #f2f2f2;      /* the assistant's messages */
+  --accent: #555555;      /* your messages, the Ask button */
+  --accent-ink: #ffffff;  /* text on the accent colour */
+  --ok: #1a7f4b; --warn: #b45309; --bad: #b42318;   /* trace markers */
+  --font: system-ui, sans-serif;
+  --size: 14px;
+  --mono: ui-monospace, Menlo, monospace;
+  --radius: 4px;
+}
