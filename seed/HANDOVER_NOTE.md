@@ -1,65 +1,65 @@
-# Przekazanie — prototyp OpsCopilot
+# Handover — the OpsCopilot prototype
 
-Cześć, tu Tomasz — kontraktor, od którego to wszystko się zaczęło. Kontrakt skończył się, zanim
-projekt był gotowy; przepraszam za przekazanie czegoś w połowie. Oto stan rzeczy.
+Hi, Tomasz here — the contractor this all started with. The contract ended before the project was
+ready; sorry for handing over something half-done. Here is where things stand.
 
-## Co działa już teraz
+## What already works
 
-- Połączenie z modelem (`opscopilot/llm/client.py`) — przez bramkę LiteLLM firmy, model
-  `bedrock-claude`, klucz z zmiennej środowiskowej `LITELLM_VIRTUAL_KEY` (na naszych maszynach już
-  ustawiony). Ustrukturyzowane odpowiedzi (JSON wg schematu) są zrobione i przetestowane. Ta
-  część jest solidna — budujcie na niej, nie przepisujcie jej. `LLM_PROVIDER=fake` daje
-  deterministyczny zamiennik do testów.
-- `python -m opscopilot.cli ask "..."` — działa od początku do końca, ale to tylko surowe pytanie
-  do modelu. Żadnej wiedzy o naszych systemach, żadnej dokumentacji. Zapytany, jakiego adresu VPN
-  używać albo jak zrestartować MES linii pakowania — z pełnym przekonaniem coś wymyśli. Zapytany
-  o numer zgłoszenia — powie, że nie widzi NordDesk.
-- Prosta strona czatu (`opscopilot/webapp/`, `python -m opscopilot.webapp`), która woła to samo
-  `ask()`. Brzydka, ale działa. `python -m opscopilot.cli status` mówi, co naprawdę działa —
-  prosto z kodu.
-- Oba udawane systemy: `norddesk_mcp/` (zgłoszenia, plik JSON) i `nordwiki_mcp/` (dokumentacja,
-  katalog plików markdown w `data/wiki/`) to działające serwery MCP. Czytają swoje pliki przy
-  każdym wywołaniu, więc dane można zmieniać w trakcie pracy. Dane w NordDesk są z dnia awarii
-  paletyzatora (INC-1042, 11 września 2026) — tak zostawiłem, żeby było na czym pracować.
-- Rzeczy, których nie trzeba pisać: modele danych (`schema.py`), magazyn SQLite (`store.py`),
-  obsługa embeddingów (`rag/embed.py` — też przez bramkę, model `titan-embed`), klient MCP do
-  wiki (`mcp_wiki/client.py`).
-- Mój poboczny projekt, `opscopilot/impact/` — szacowanie przestoju i kosztu w EUR: regresor
-  scikit-learn uczony na historii incydentów z `data/incidents/` (model trenuje się sam przy
-  pierwszym użyciu, około sekundy). `python -m opscopilot.cli impact INC-1042` pokazuje wynik
-  i czynniki, które go przesunęły; `python scripts/train_impact.py --variant leaked --eval`
-  pokazuje, co złe dane robią z R². Bez żadnego LLM. Uwaga: to polecenie czyta
-  `var/norddesk.json` bezpośrednio, a nie przez klienta MCP (którego nie ma) — dobre na projekt
-  poboczny, nie do aplikacji.
+- The model connection (`opscopilot/llm/client.py`) — through the company's LiteLLM gateway, model
+  `bedrock-claude`, key from the environment variable `LITELLM_VIRTUAL_KEY` (already set on our
+  machines). Structured answers (JSON by schema) are done and tested. This part is solid — build
+  on it, do not rewrite it. `LLM_PROVIDER=fake` gives a deterministic stand-in for tests.
+- `python -m opscopilot.cli ask "..."` — works end to end, but it is only a raw question to the
+  model. No knowledge of our systems, no documentation. Asked which VPN address to use or how to
+  restart the packing line's MES — it will make something up with full confidence. Asked about a
+  ticket number — it will say it cannot see NordDesk.
+- A simple chat page (`opscopilot/webapp/`, `python -m opscopilot.webapp`) that calls the same
+  `ask()`. Ugly, but it works. `python -m opscopilot.cli status` says what really works —
+  straight from the code.
+- Both fake systems: `norddesk_mcp/` (tickets, a JSON file) and `nordwiki_mcp/` (documentation, a
+  folder of markdown files in `data/wiki/`) are working MCP servers. They read their files on
+  every call, so the data can be changed while you work. The NordDesk data is from the day of the
+  palletiser breakdown (INC-1042, 11 September 2026) — I left it like that so there is something
+  to work with.
+- Things you do not need to write: the data models (`schema.py`), the SQLite store (`store.py`),
+  embeddings handling (`rag/embed.py` — also through the gateway, model `titan-embed`), the MCP
+  client for the wiki (`mcp_wiki/client.py`).
+- My side project, `opscopilot/impact/` — estimating downtime and cost in EUR: a scikit-learn
+  regressor trained on the incident history in `data/incidents/` (the model trains itself on first
+  use, about a second). `python -m opscopilot.cli impact INC-1042` shows the result and the
+  factors that moved it; `python scripts/train_impact.py --variant leaked --eval` shows what bad
+  data does to R². No LLM at all. Note: that command reads `var/norddesk.json` directly, not
+  through the MCP client (which does not exist) — fine for a side project, not for the app.
 
-## Co zacząłem i nie skończyłem
+## What I started and did not finish
 
-- `opscopilot/mcp_tickets/` — klient MCP do NordDesk. Połączenie i sygnatury funkcji są, ale
-  każda funkcja to `NotImplementedError("TODO")`. To pierwsza rzecz do zrobienia — bez niej nic
-  innego nie ma sensu. Do wywołań HTTP użyty jest `httpx`.
-- `opscopilot/history.py` — pamięć rozmowy. Magazyn jest, logika okna rozmowy nie.
-- `opscopilot/loop.py` — wiele narzędzi w jednym pytaniu. Same sygnatury.
+- `opscopilot/mcp_tickets/` — the MCP client for NordDesk. The connection and the function
+  signatures are there, but every function is `NotImplementedError("TODO")`. This is the first
+  thing to do — without it nothing else makes sense. HTTP calls are made with `httpx`.
+- `opscopilot/history.py` — conversation memory. The store is there, the conversation-window
+  logic is not.
+- `opscopilot/loop.py` — several tools for one question. Signatures only.
 
-## Do czego nie doszedłem
+## What I did not get to
 
-- `opscopilot/govern/` — puste funkcje. To martwi mnie najbardziej: zanim ktokolwiek spoza IT
-  tego dotknie, asystent musi odmawiać tego, na co nie powinien odpowiadać, i nie dać się namówić
-  na wyciek danych.
-- `opscopilot/rag/` — wyszukiwanie w wiki. Embeddingi są; dzielenie na fragmenty, indeks
-  i `retrieve()` — nie.
-- Marek (kierownik zmiany) chce automatycznego podsumowania na koniec zmiany w konkretnym
-  formacie. Jego szablon jest w `opscopilot/templates/handover.md`; implementacji zero.
+- `opscopilot/govern/` — empty functions. This worries me most: before anyone outside IT touches
+  it, the assistant must refuse what it should not answer and must not be talked into leaking
+  data.
+- `opscopilot/rag/` — wiki search. The embeddings are there; splitting into chunks, the index and
+  `retrieve()` — not.
+- Marek (the shift manager) wants an automatic summary at the end of a shift in a specific format.
+  His template is in `opscopilot/templates/handover.md`; zero implementation.
 
-## Plan — gdybym zostawał (albo dla tego, kto to przejmie)
+## Plan — if I were staying (or for whoever takes this over)
 
-1. Przejęcie: przeczytać tę notatkę i sprawdzić ją z kodem, ustawić swojego asystenta kodu
-   (Cline) pod siebie w `.clinerules/moje-zasady.md`, nadać stronie czatu wygląd Nordfarm
-2. Klient MCP do zgłoszeń (bez tego nic nie działa)
-3. Pamięć rozmowy (i zobaczyć, co psuje)
-4. Pętla narzędzi
-5. Ustalić, czego asystent ma odmawiać — zanim powstanie jakakolwiek blokada
-6. Zabezpieczenia (guardrails)
-7. Wyszukiwanie w wiki (RAG)
-8. Szlify — ślad odpowiedzi i koszty, raport Marka, szacowanie wpływu jako narzędzie asystenta
+1. Takeover: read this note and check it against the code, set up your coding assistant (Cline)
+   for yourself in `.clinerules/moje-zasady.md`, give the chat page the Nordfarm look
+2. The MCP client for tickets (without it nothing works)
+3. Conversation memory (and see what it breaks)
+4. The tool loop
+5. Decide what the assistant must refuse — before any blocking is built
+6. Guardrails
+7. Wiki search (RAG)
+8. Polish — answer trace and costs, Marek's report, the impact estimate as an assistant tool
 
-Powodzenia. — T.
+Good luck. — T.

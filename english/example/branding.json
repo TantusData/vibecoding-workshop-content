@@ -1,0 +1,7 @@
+{
+  "name": "OpsCopilot Nordfarm",
+  "tagline": "on-call IT/OT assistant — tickets, procedures, shift handovers",
+  "logo": "🌾",
+  "welcome": "Good morning! Ask about the plant's tickets, systems and procedures.",
+  "placeholder": "e.g. Check ticket INC-1042"
+}

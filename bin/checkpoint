@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """bin/checkpoint N — catch up: replace the project with the reference state at the END of step N.
 
+ENGLISH TESTER BRANCH: a translation of the Polish course's bin/checkpoint. One difference: the
+snapshot's Polish project files that this branch translated (the note, README, agent context,
+chat page, example rules and look) are written in English (english_snapshot, english/swap.txt).
+
 Contract (reversible in one command, bin/undo):
   1. commit everything in ~/work/project first — nothing the participant made is destroyed;
   2. fetch refs/checkpoints/NN from the remote into a throw-away bare repo — the snapshot is not
      on disk before this and nothing of it stays in ~/workshop afterwards;
-  3. show, in Polish, what would be overwritten and ask for confirmation;
+  3. show what would be overwritten and ask for confirmation;
   4. copy the snapshot over the project, skipping every keep.txt path the participant changed;
   5. commit the result, and record the pre-checkpoint commit for bin/undo.
 Files the participant added that the snapshot does not have are left alone.
@@ -22,6 +26,7 @@ from _warsztat import (  # noqa: E402
     UNDO_FILE,
     commit_all,
     confirm,
+    english_snapshot,
     ensure_project_repo,
     fetch_refs,
     is_participants,
@@ -32,15 +37,15 @@ from _warsztat import (  # noqa: E402
     unlock,
 )
 
-USAGE = """Użycie: ~/workshop/bin/checkpoint N      (N = 1…8)
+USAGE = """Usage: ~/workshop/bin/checkpoint N      (N = 1…8)
 
-Zastępuje kod projektu gotowym stanem z KOŃCA kroku N (w krokach 3 i 7: razem z częścią B).
-Najpierw zapisuje (commit) wszystko, co masz, więc można to cofnąć jednym poleceniem:
-~/workshop/bin/undo. Twój wygląd aplikacji, Twoje zasady dla agenta i Twój zestaw testowy
-zostają (lista: ~/workshop/keep.txt).
+Replaces the project's code with the finished state at the END of step N (steps 3 and 7: with
+part B). It first saves (commits) everything you have, so one command undoes it:
+~/workshop/bin/undo. Your app look, your rules for the agent and your test set stay
+(list: ~/workshop/keep.txt).
 
-Jeśli brakuje Ci tylko części kroku, lepiej najpierw spróbować bez checkpointu:
-pokaż agentowi ~/workshop/specs/NN/spec.md i wynik ~/workshop/bin/sprawdz N."""
+If you are missing only part of a step, try without a checkpoint first:
+show the agent ~/workshop/specs/NN/spec.md and the output of ~/workshop/bin/sprawdz N."""
 
 
 def main(argv: list[str]) -> int:
@@ -51,9 +56,9 @@ def main(argv: list[str]) -> int:
     ensure_project_repo(project)
     patterns = keep_patterns()
 
-    print(f"Pobieram checkpoint {n:02d}…", flush=True)
+    print(f"Fetching checkpoint {n:02d}…", flush=True)
     ref = f"refs/checkpoints/{n:02d}"
-    snap = fetch_refs([ref])[ref]
+    snap = english_snapshot(fetch_refs([ref])[ref])
     paths = sorted(p for p in snap if not p.endswith("\0x"))
 
     new, changed, kept = [], [], []
@@ -67,54 +72,53 @@ def main(argv: list[str]) -> int:
         elif mine.read_bytes() != snap[rel]:
             changed.append(rel)
 
-    print(f"\nCheckpoint {n:02d} = gotowy stan projektu po kroku {n:02d}.")
+    print(f"\nCheckpoint {n:02d} = the finished project state after step {n:02d}.")
     if not new and not changed:
-        print("Projekt ma już dokładnie te pliki — nic do zrobienia.")
+        print("The project already has exactly these files — nothing to do.")
         unlock(units_upto(unit))
         return 0
-    print(f"\nZostanie NADPISANYCH plików: {len(changed)}")
+    print(f"\nFiles to be OVERWRITTEN: {len(changed)}")
     for rel in changed[:40]:
         print(f"  ~ {rel}")
     if len(changed) > 40:
-        print(f"  … i {len(changed) - 40} więcej")
-    print(f"Zostanie DODANYCH plików: {len(new)}")
+        print(f"  … and {len(changed) - 40} more")
+    print(f"Files to be ADDED: {len(new)}")
     for rel in new[:15]:
         print(f"  + {rel}")
     if len(new) > 15:
-        print(f"  … i {len(new) - 15} więcej")
+        print(f"  … and {len(new) - 15} more")
     if kept:
-        print("Twoje pliki, których checkpoint NIE ruszy (keep.txt):")
+        print("Your files the checkpoint will NOT touch (keep.txt):")
         for rel in kept:
             print(f"  = {rel}")
     print(
-        "\nNajpierw zapiszę (commit) obecny stan projektu, więc wszystko da się cofnąć:\n"
+        "\nFirst I will save (commit) the current state of the project, so everything can be undone:\n"
         "  ~/workshop/bin/undo\n"
-        "Cofnięcie przywraca pliki — ale gotowe rozwiązanie kroku zobaczysz Ty i Twój agent."
+        "Undo restores the files — but you and your agent will have seen the step's solution."
     )
-    if not confirm("\nKontynuować? Wpisz TAK i Enter: ", assume_yes):
-        print("Przerwano. Nic nie zostało zmienione.")
+    if not confirm("\nContinue? Type YES and Enter: ", assume_yes):
+        print("Cancelled. Nothing was changed.")
         return 1
 
-    before = commit_all(project, f"Stan przed checkpointem {n:02d}")
+    before = commit_all(project, f"State before checkpoint {n:02d}")
     for rel in new + changed:
         dst = project / rel
         dst.parent.mkdir(parents=True, exist_ok=True)
         dst.write_bytes(snap[rel])
         if rel + "\0x" in snap:
             dst.chmod(0o755)
-    after = commit_all(project, f"Checkpoint {n:02d}: gotowy stan po kroku {n:02d}")
+    after = commit_all(project, f"Checkpoint {n:02d}: finished state after step {n:02d}")
     with (project / ".git" / UNDO_FILE).open("a", encoding="utf-8") as fh:
         fh.write(f"{n:02d} {before} {after}\n")
     opened = unlock(units_upto(unit))  # a jump ahead still gets the pages and tests up to N
 
     print(
-        f"\nGotowe: projekt jest w stanie po kroku {n:02d} "
-        f"({len(changed)} nadpisanych, {len(new)} dodanych plików).\n"
-        + (f"Pobrano materiały kroków: {', '.join(label(u) for u in opened)}.\n" if opened else "")
-        + f"Sprawdź:  ~/workshop/bin/sprawdz {n}\n"
-        "Cofnij:   ~/workshop/bin/undo\n"
-        "Jeśli aplikacja była uruchomiona, zrestartuj ją (Ctrl+C, potem znowu "
-        "python -m opscopilot.webapp)."
+        f"\nDone: the project is in its state after step {n:02d} "
+        f"({len(changed)} overwritten, {len(new)} added files).\n"
+        + (f"Fetched materials of steps: {', '.join(label(u) for u in opened)}.\n" if opened else "")
+        + f"Check:  ~/workshop/bin/sprawdz {n}\n"
+        "Undo:   ~/workshop/bin/undo\n"
+        "If the app was running, restart it (Ctrl+C, then python -m opscopilot.webapp again)."
     )
     return 0
 

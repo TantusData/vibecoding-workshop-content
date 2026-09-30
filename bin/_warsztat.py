@@ -1,9 +1,14 @@
 """Shared code for the workshop's commands: krok, sprawdz, zakoncz, checkpoint, undo.
 
+ENGLISH TESTER BRANCH (tester-en): a translation of the Polish course's bin/_warsztat.py, built by
+scripts/build_tester_en.py. Same logic; differences: everything printed is English, the step
+texts shown in the terminal (where you are, first action, manual checks) come from GUIDE_EN.md
+(the English guide, one block per unit) instead of the Polish page, the agent's current-stage
+file is English, and the Polish step page stays on disk as the original.
+
 Paths: the material is this repository (~/workshop, refreshed on every boot and never edited by
 participants); the participant's project is ~/work/project (OPSCOPILOT_PROJECT overrides it, for
-tests of these scripts). Everything printed for participants is Polish; code and comments are
-English. Standard library only: these run before anything else is known to work.
+tests of these scripts). Standard library only: these run before anything else is known to work.
 
 Step materials (steps/NN, specs/NN, tests/NN) are NOT in the clone: each lives under a ref
 refs/steps/NN that no clone or default fetch downloads, and `krok` fetches it on demand — an agent
@@ -37,35 +42,37 @@ DONE_FILE = "workshop-done"
 IDENTITY = ("Workshop", "coder@workshop.local")  # invented, local only — never pushed anywhere
 MANIFEST = WS / "materialy.sha256"
 CURRENT = Path(".clinerules") / "aktualny-etap.md"
+GUIDE = WS / "GUIDE_EN.md"
+SWAP = WS / "english" / "swap.txt"
 
 # every unit of material, in the order of the day (a unit = one hidden ref)
 UNITS = ["01", "02", "03", "03b", "04", "05", "06", "07", "07b", "08"]
 SPLIT = {"03", "07"}  # steps with a part B
 TITLES = {
-    "01": "Przeczytaj notatkę, nie całe repozytorium — i nadaj projektowi swój wygląd",
-    "02": "Daj asystentowi system zgłoszeń",
-    "03": "Niech pamięta rozmowę",
-    "03b": "Pamięć, która kłamie — i jak to naprawić",
-    "04": "Pętla narzędzi z limitem",
-    "05": "Zdecydujcie, czego ma odmawiać",
-    "06": "Zabezpieczenia i audyt",
-    "07": "Daj mu wiki: wyszukiwanie w dokumentacji",
-    "07b": "Dlaczego nie znalazł? Jakość wyszukiwania",
-    "08": "Skończyliśmy projekt Tomasza",
+    "01": "Read the note, not the whole repository — and make the project look like yours",
+    "02": "Give the assistant the ticket system",
+    "03": "Let it remember the conversation",
+    "03b": "Memory that lies — and how to fix it",
+    "04": "A tool loop with a limit",
+    "05": "Decide what it must refuse",
+    "06": "Guardrails and audit",
+    "07": "Give it the wiki: searching the documentation",
+    "07b": "Why didn't it find it? Retrieval quality",
+    "08": "We finished Tomasz's project",
 }
 # the same units as the agent sees them: stages of Tomasz's plan (HANDOVER_NOTE.md), in the
 # project's own words — no course vocabulary reaches the agent
 STAGES = {
-    "01": "Przejęcie projektu: notatka Tomasza a kod",
-    "02": "Klient NordDesk (system zgłoszeń)",
-    "03": "Pamięć rozmowy",
-    "03b": "Pamięć rozmowy — świeże dane zamiast pamięci",
-    "04": "Pętla narzędzi z limitem",
-    "05": "Czego asystent ma odmawiać — zestaw decyzji",
-    "06": "Zabezpieczenia i audyt",
-    "07": "Wyszukiwanie w wiki (RAG)",
-    "07b": "Wyszukiwanie w wiki — jakość fragmentów",
-    "08": "Szlify: ślad, koszty, model wpływu, raport zmiany",
+    "01": "Taking over the project: Tomasz's note versus the code",
+    "02": "NordDesk client (the ticket system)",
+    "03": "Conversation memory",
+    "03b": "Conversation memory — fresh data instead of memory",
+    "04": "A tool loop with a limit",
+    "05": "What the assistant must refuse — the decision set",
+    "06": "Guardrails and audit",
+    "07": "Wiki search (RAG)",
+    "07b": "Wiki search — chunk quality",
+    "08": "Polish: trace, costs, impact model, shift report",
 }
 
 
@@ -75,10 +82,10 @@ def fail(message: str, code: int = 1) -> None:
 
 
 def label(unit: str) -> str:
-    """'03' -> '03' (or '03, część A' for a split step), '03b' -> '03, część B'."""
+    """'03' -> '03' (or '03, part A' for a split step), '03b' -> '03, part B'."""
     if unit.endswith("b"):
-        return f"{unit[:2]}, część B"
-    return f"{unit}, część A" if unit in SPLIT else unit
+        return f"{unit[:2]}, part B"
+    return f"{unit}, part A" if unit in SPLIT else unit
 
 
 def parse(argv: list[str], usage: str, *, part_a_of_split: bool) -> str:
@@ -92,7 +99,7 @@ def parse(argv: list[str], usage: str, *, part_a_of_split: bool) -> str:
         fail(usage, 2)
     n, part = f"{int(m.group(1)):02d}", m.group(2).lower()
     if part and n not in SPLIT:
-        fail(f"Krok {n} nie ma części A/B.\n\n{usage}", 2)
+        fail(f"Step {n} has no parts A/B.\n\n{usage}", 2)
     if part == "b" or (not part and n in SPLIT and not part_a_of_split):
         return n + "b"
     return n
@@ -144,8 +151,8 @@ def fetch_refs(refs: list[str]) -> dict[str, dict[str, bytes]]:
         )
         if r.returncode:
             fail(
-                "Nie udało się pobrać materiałów z repozytorium kursu.\n"
-                "Sprawdź połączenie i spróbuj ponownie; jeśli nie pomoże — zawołaj trenera.\n"
+                "Could not fetch the materials from the course repository.\n"
+                "Check the connection and try again; if that does not help, call the trainer.\n"
                 f"(git: {r.stderr.strip()[:300]})"
             )
         for i, ref in enumerate(refs):
@@ -217,20 +224,27 @@ def tampered_materials() -> list[str]:
                     present.add(rel)
                     sha = hashlib.sha256(p.read_bytes()).hexdigest()
                     if rel not in pinned:
-                        problems.append(f"?? {rel} (dodany)")
+                        problems.append(f"?? {rel} (added)")
                     elif pinned[rel] != sha:
-                        problems.append(f" M {rel} (zmieniony)")
-        problems += [f" D {rel} (usunięty)" for rel in sorted(expected - present)]
+                        problems.append(f" M {rel} (changed)")
+        problems += [f" D {rel} (deleted)" for rel in sorted(expected - present)]
     return problems
 
 
 def section(unit: str, title: str) -> str:
-    """The text of one `## title` section of steps/<unit>/README.md (empty if absent)."""
-    path = WS / "steps" / unit / "README.md"
-    if not path.exists():
+    """The text of one `### title` subsection of the unit's block in GUIDE_EN.md (empty if
+    absent). A block starts at the line `<!-- unit NN -->` and runs to the next one."""
+    if not GUIDE.exists():
         return ""
-    text = path.read_text(encoding="utf-8")
-    m = re.search(rf"^## {re.escape(title)}\s*$(.*?)(?=^## |\Z)", text, flags=re.M | re.S)
+    text = GUIDE.read_text(encoding="utf-8")
+    block = re.search(
+        rf"^<!-- unit {re.escape(unit)} -->\s*$(.*?)(?=^<!-- unit |\Z)", text, flags=re.M | re.S
+    )
+    if not block:
+        return ""
+    m = re.search(
+        rf"^### {re.escape(title)}\s*$(.*?)(?=^##+ |\Z)", block.group(1), flags=re.M | re.S
+    )
     return m.group(1).strip() if m else ""
 
 
@@ -255,26 +269,26 @@ def write_current(project: Path, unit: str) -> None:
         return
     n = unit[:2]
     check = check_arg(unit)
-    part = ", część druga" if unit.endswith("b") else ""
+    part = ", second part" if unit.endswith("b") else ""
     lines = [
-        f"# Etap w toku: {int(n)}{part} z planu Tomasza — {STAGES[unit]}",
+        f"# Stage in progress: {int(n)}{part} of Tomasz's plan — {STAGES[unit]}",
         "",
-        "Ten plik ustawia `~/workshop/bin/krok`; nie edytuj go.",
+        "This file is set by `~/workshop/bin/krok`; do not edit it.",
         "",
     ]
     for u in [n, unit] if unit.endswith("b") else [unit]:
         lines += [
-            f"- Wymagania, decyzje i kontrakt: `~/workshop/specs/{u}/spec.md`",
-            f"- Testy odbiorcze: `~/workshop/tests/{u}/` (tylko do odczytu)",
+            f"- Requirements, decisions and contract (in Polish): `~/workshop/specs/{u}/spec.md`",
+            f"- Acceptance tests: `~/workshop/tests/{u}/` (read-only)",
         ]
     lines += [
-        f"- Sprawdzanie po każdej zmianie: `~/workshop/bin/sprawdz {check}`",
+        f"- Check after every change: `~/workshop/bin/sprawdz {check}`",
         "",
-        "- Pracuj tylko nad tym etapem: wcześniejsze są skończone, późniejszych nie zaczynaj.",
-        "- Po wyniku ZALICZONY napisz krótko, że testy odbiorcze przechodzą i że teraz osoba,",
-        "  z którą pracujesz, wykonuje swoje sprawdzenia ręczne, a etap kończy sama poleceniem",
-        f"  `~/workshop/bin/zakoncz {check}`. Nie wypisuj sprawdzeń ręcznych, nie wykonuj ich",
-        "  i nie oceniaj ich wyniku.",
+        "- Work on this stage only: earlier ones are finished, do not start later ones.",
+        "- After a PASSED result, say briefly that the acceptance tests pass and that the person",
+        "  you work with now does their own manual checks and closes the stage themselves with",
+        f"  `~/workshop/bin/zakoncz {check}`. Do not list the manual checks, do not perform them",
+        "  and do not judge their result.",
         "",
     ]
     path = project / CURRENT
@@ -283,13 +297,12 @@ def write_current(project: Path, unit: str) -> None:
 
 
 def manual_checks(unit: str) -> list[str]:
-    """The numbered items of the page's "Jak sprawdzić, że działa" / "### Ręcznie" subsection."""
-    checks = section(unit, "Jak sprawdzić, że działa")
-    m = re.search(r"^### Ręcznie\s*$(.*?)(?=^### |\Z)", checks, flags=re.M | re.S)
-    if not m:
+    """The numbered items of the unit's "### Manual checks" subsection in GUIDE_EN.md."""
+    checks = section(unit, "Manual checks")
+    if not checks:
         return []
     items: list[str] = []
-    for line in m.group(1).strip().splitlines():
+    for line in checks.splitlines():
         if re.match(r"^\d+\.\s", line):
             items.append(line)
         elif items:
@@ -300,14 +313,14 @@ def manual_checks(unit: str) -> list[str]:
 def ensure_project_repo(project: Path) -> None:
     if not project.is_dir():
         fail(
-            f"Nie ma katalogu projektu {project}.\n"
-            "Powinien powstać sam przy starcie maszyny (kopia ~/workshop/seed). "
-            "Poproś trenera o pomoc."
+            f"There is no project folder {project}.\n"
+            "It should be created when the machine starts (a copy of ~/workshop/seed). "
+            "Ask the trainer for help."
         )
     if not (project / ".git").exists():
         git("init", "-q", cwd=project)
         git("add", "-A", cwd=project)
-        git("commit", "-q", "--allow-empty", "-m", "Start projektu", cwd=project)
+        git("commit", "-q", "--allow-empty", "-m", "Project start", cwd=project)
 
 
 def commit_all(project: Path, message: str) -> str:
@@ -346,9 +359,29 @@ def confirm(prompt: str, assume_yes: bool) -> bool:
     if assume_yes:
         return True
     if not sys.stdin.isatty():
-        fail("To polecenie pyta o potwierdzenie — uruchom je samodzielnie w terminalu.", 2)
+        fail("This command asks for confirmation — run it yourself in a terminal.", 2)
     try:
         answer = input(prompt)
     except EOFError:
         return False
-    return answer.strip().lower() in ("tak", "t", "yes", "y")  # y/yes: an English-speaking tester
+    return answer.strip().lower() in ("yes", "y", "tak", "t")
+
+
+def english_snapshot(snap: dict[str, bytes]) -> dict[str, bytes]:
+    """A checkpoint snapshot with its Polish project files (the note, README, agent context,
+    chat page, example rules and look) replaced by their English versions. english/swap.txt maps
+    the sha256 of each known Polish file to the English file in ~/workshop; any other file —
+    code, data, a Polish file this branch does not know — passes through unchanged."""
+    if not SWAP.exists():
+        return snap
+    table = {}
+    for line in SWAP.read_text(encoding="utf-8").splitlines():
+        if line.strip() and not line.startswith("#"):
+            sha, rel = line.split(maxsplit=1)
+            table[sha] = WS / rel
+    out = dict(snap)
+    for path, data in snap.items():
+        english = table.get(hashlib.sha256(data).hexdigest())
+        if english is not None and english.is_file():
+            out[path] = english.read_bytes()
+    return out

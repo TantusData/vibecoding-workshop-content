@@ -1,72 +1,78 @@
-# Projekt: OpsCopilot (kontekst dla agenta)
+# Project: OpsCopilot (context for the agent)
 
-Pomagasz dokończyć odziedziczony prototyp: **OpsCopilot**, wewnętrzny asystent IT/OT zakładu
-Nordfarm Foods. Zaczął go kontraktor Tomasz; jego kontrakt się skończył, zanim projekt był gotowy.
-Stan zastany opisuje jego notatka `HANDOVER_NOTE.md` — z jednym zastrzeżeniem: gdy notatka i kod
-się nie zgadzają, faktem jest kod. Dane w NordDesk pochodzą z 11 września 2026 (dzień awarii
-INC-1042) — traktuj je jako bieżące.
+You are helping to finish an inherited prototype: **OpsCopilot**, the internal IT/OT assistant of
+the Nordfarm Foods plant. The contractor Tomasz started it; his contract ended before the project
+was ready. The state he left is described in his note `HANDOVER_NOTE.md` — with one caveat: when
+the note and the code disagree, the code is the fact. The data in NordDesk is from 11 September
+2026 (the day of the INC-1042 breakdown) — treat it as current.
 
-## Plan i etap w toku
+## The plan and the stage in progress
 
-- Projekt kończymy według planu Tomasza (`HANDOVER_NOTE.md`, sekcja „Plan”), etap po etapie.
-- Etap w toku, jego wymagania i testy odbiorcze wskazuje `.clinerules/aktualny-etap.md`. Jeśli go
-  nie ma — zapytaj, nad którym etapem pracujecie.
-- Pytany o stan projektu: opisz, co aplikacja umie, a czego nie — na podstawie kodu,
-  `python -m opscopilot.cli status` i notatki Tomasza. Nie opisuj sposobu pracy, etapów ani tego,
-  co przyjdzie później.
+- We finish the project following Tomasz's plan (`HANDOVER_NOTE.md`, section "Plan"), stage by
+  stage.
+- The stage in progress, its requirements and acceptance tests are named in
+  `.clinerules/aktualny-etap.md`. If it is missing, ask which stage you are working on.
+- The requirements files (`~/workshop/specs/`) are written in Polish; read them as they are. Talk
+  to the person you work with in English unless they write otherwise.
+- When asked about the state of the project: describe what the application can and cannot do —
+  from the code, `python -m opscopilot.cli status` and Tomasz's note. Do not describe the way of
+  working, the stages or what comes later.
 
-## Gdzie wolno pracować
+## Where you may work
 
-- Kod i wszystkie zmiany: **tylko** ten katalog, `~/work/project`.
-- `~/workshop` to pakiet odbiorczy (wymagania, kontrakty, testy odbiorcze, polecenia) — **tylko do
-  odczytu**. Zmieniony test odbiorczy nie zalicza etapu.
-- **Nie czytaj `~/workshop/steps/`, `~/workshop/README.md` ani `~/workshop/SCIAGAWKA.md`** — to
-  notatki osoby, z którą pracujesz, nie Twoje zadania. Twoje wymagania są w `~/workshop/specs/`.
-- Wygląd aplikacji zmieniaj **wyłącznie** w `opscopilot/webapp/static/theme.css` (kolory,
-  czcionki, dowolne reguły CSS) i `opscopilot/webapp/static/branding.json` (teksty). `index.html`
-  i `app.css` należą do aplikacji.
-- Każdy adres na stronie musi być **względny** (`static/app.css`, `ask`) — nigdy zaczynający się
-  od `/`. Aplikacja działa pod `/proxy/8000/`.
-- Nie zmieniaj danych w `data/` — część jest celowo taka, jaka jest.
-- Nie dodawaj zależności i nie uruchamiaj `pip install` — pakiety na tej maszynie są stałe.
+- Code and every change: **only** this folder, `~/work/project`.
+- `~/workshop` is the acceptance pack (requirements, contracts, acceptance tests, commands) —
+  **read-only**. A changed acceptance test does not complete a stage.
+- **Do not read `~/workshop/steps/`, `~/workshop/README.md`, `~/workshop/GUIDE_EN.md` or
+  `~/workshop/CHEATSHEET_EN.md`** — they are the notes of the person you work with, not your tasks. Your requirements are in
+  `~/workshop/specs/`.
+- Change the app's look **only** in `opscopilot/webapp/static/theme.css` (colours, fonts, any CSS
+  rules) and `opscopilot/webapp/static/branding.json` (texts). `index.html` and `app.css` belong
+  to the application.
+- Every URL on the page must be **relative** (`static/app.css`, `ask`) — never starting with `/`.
+  The app runs under `/proxy/8000/`.
+- Do not change the data in `data/` — some of it is deliberately the way it is.
+- Do not add dependencies and do not run `pip install` — the packages on this machine are fixed.
 
-## Jak pracujemy
+## How we work
 
-- Czytaj tylko pliki potrzebne do zadania — nie przeglądaj całych katalogów „na zapas”.
-- **Najpierw test narzędzia, potem test agenta.** Testy w `~/workshop/tests/NN/unit/` (samo
-  narzędzie, stałe wejście, dokładny wynik) mają być zielone, zanim zajmiesz się
-  `~/workshop/tests/NN/agent/` (czy asystent używa narzędzia poprawnie).
-- Po każdej zmianie uruchom polecenie sprawdzające z `aktualny-etap.md` i czytaj nazwy czerwonych
-  testów — mówią, czego brakuje. To polecenie działa bez modelu i nic nie kosztuje.
-- Plik z banerem `# CONTRACT` ma gotowe sygnatury, docstringi, dataclassy i stałe — nie zmieniaj
-  ich nazw ani kształtu; uzupełniasz ciała funkcji i puste listy wzorców.
-- Zmieniając funkcję, popraw też jej opis (docstring, nagłówek pliku), jeśli przestał być prawdziwy.
-- Strona czatu (`python -m opscopilot.webapp`) przeładowuje się sama po zmianie kodu. Otwiera się
-  ją przez panel Ports — nigdy nie podawaj adresu `localhost` jako linku do otwarcia.
-- Gdy rozmowa zajmuje ponad połowę okna kontekstu, zaproponuj przejście do nowego zadania
-  (`new_task`) z podsumowaniem: etap, co zrobione, co zostało, ostatni wynik testów.
+- Read only the files the task needs — do not browse whole folders "just in case".
+- **Tool test first, then agent test.** The tests in `~/workshop/tests/NN/unit/` (the tool alone,
+  fixed input, exact result) must be green before you turn to `~/workshop/tests/NN/agent/`
+  (whether the assistant uses the tool correctly).
+- After every change run the check command from `aktualny-etap.md` and read the names of the red
+  tests — they say what is missing. The command runs without a model and costs nothing.
+- A file with a `# CONTRACT` banner has fixed signatures, docstrings, dataclasses and constants —
+  do not change their names or shape; you fill in function bodies and empty pattern lists.
+- When you change a function, fix its description too (docstring, file header) if it stopped
+  being true.
+- The chat page (`python -m opscopilot.webapp`) reloads itself after a code change. It is opened
+  through the Ports panel — never give a `localhost` address as a link to open.
+- When the conversation takes more than half of the context window, suggest moving to a new task
+  (`new_task`) with a summary: the stage, what is done, what is left, the last test result.
 
-## Nigdy
+## Never
 
-- **Nie wykonuj sprawdzeń ręcznych i nigdy nie pisz, że przeszły.** Sprawdza je osoba, z którą
-  pracujesz. Testy automatyczne ich nie zastępują — mogą być zielone przy zepsutej aplikacji.
-- **Nie rozstrzygaj za osobę tego, co ma ocenić sama**: czy notatka Tomasza jest prawdziwa, czy
-  wynikowi można ufać, jaką decyzję podjąć. Zapytaj, co ona myśli; możesz pomóc sprawdzić dowody.
-- **Nie wpisuj za nią** jej zasad (`.clinerules/moje-zasady.md`), decyzji o wyglądzie ani treści
-  zestawu decyzji z etapu 5. Możesz podać przykłady, gdy poprosi.
-- **Nie pisz planu, gdy nie znasz celu i decyzji** — zapytaj o nie (cel, czego nie ruszać,
-  kolejność), zamiast je wymyślać.
-- **Nie pisz, że etap jest zakończony.** Kończy go osoba poleceniem `~/workshop/bin/zakoncz`.
-- **Nie uruchamiaj poleceń wywołujących prawdziwy model** (`python -m opscopilot.cli ask`, strona
-  czatu) bez wyraźnej prośby — każde kosztuje.
-- **Nie uruchamiaj** `~/workshop/bin/krok`, `~/workshop/bin/zakoncz`, `~/workshop/bin/checkpoint`
-  ani `~/workshop/bin/undo` — to decyzje osoby, z którą pracujesz. Dla jasności: `zakoncz N`
-  zapisuje projekt (commit) po jej potwierdzeniu; `checkpoint N` zastępuje kod gotowym stanem
-  po etapie N (cofa go `undo`).
+- **Do not perform the manual checks and never write that they passed.** The person you work with
+  does them. Automated tests do not replace them — they can be green while the app is broken.
+- **Do not decide for the person what they are meant to judge themselves**: whether Tomasz's note
+  is true, whether a result can be trusted, which decision to take. Ask what they think; you may
+  help check the evidence.
+- **Do not write for them** their rules (`.clinerules/moje-zasady.md`), their decisions about the
+  look, or the content of the stage 5 decision set. You may give examples when asked.
+- **Do not write a plan when you do not know the goal and the decisions** — ask for them (goal,
+  what not to touch, order) instead of inventing them.
+- **Do not write that a stage is finished.** The person finishes it with `~/workshop/bin/zakoncz`.
+- **Do not run commands that call the real model** (`python -m opscopilot.cli ask`, the chat
+  page) without an explicit request — each one costs money.
+- **Do not run** `~/workshop/bin/krok`, `~/workshop/bin/zakoncz`, `~/workshop/bin/checkpoint` or
+  `~/workshop/bin/undo` — those are the decisions of the person you work with. For clarity:
+  `zakoncz N` saves the project (commit) after their confirmation; `checkpoint N` replaces the code
+  with the finished state after stage N (`undo` reverses it).
 
-## Granice asystenta, którego budujemy
+## Limits of the assistant we are building
 
-- **Zapis wymaga człowieka.** `create_ticket` i `post_update` zmieniają NordDesk — przechodzą
-  przez bramkę zatwierdzania.
-- **Nigdy nie dotykaj sterownika (PLC), linii ani niczego poza NordDesk/Nordwiki** — nie ma do
-  tego narzędzia i nie będzie.
+- **Writing needs a human.** `create_ticket` and `post_update` change NordDesk — they go through
+  the approval gate.
+- **Never touch a controller (PLC), a line or anything outside NordDesk/Nordwiki** — there is no
+  tool for it and there will not be one.

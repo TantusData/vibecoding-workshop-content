@@ -1,32 +1,32 @@
 # OpsCopilot
 
-Wewnętrzny asystent IT/OT zakładu Nordfarm Foods: odpowiada zmianie na pytania o zgłoszenia
-(NordDesk), systemy i procedury (Nordwiki). Prototyp zaczął Tomasz — stan zastany i jego plan są
-w `HANDOVER_NOTE.md`.
+The internal IT/OT assistant of the Nordfarm Foods plant: answers the shift's questions about
+tickets (NordDesk), systems and procedures (Nordwiki). Tomasz started the prototype — the state he
+left and his plan are in `HANDOVER_NOTE.md`.
 
-## Polecenia (terminal, w tym katalogu)
+## Commands (terminal, in this folder)
 
 ```bash
-python -m opscopilot.cli status              # co naprawdę działa — prosto z kodu
-python -m opscopilot.cli ask "Sprawdź zgłoszenie INC-1042."
-python -m opscopilot.webapp                  # strona czatu — otwórz ją przez panel PORTS
-python -m norddesk_mcp init --force          # przywróć dane NordDesk do stanu wyjściowego
+python -m opscopilot.cli status              # what really works — straight from the code
+python -m opscopilot.cli ask "Check ticket INC-1042."
+python -m opscopilot.webapp                  # the chat page — open it through the PORTS panel
+python -m norddesk_mcp init --force          # reset the NordDesk data to its starting state
 ```
 
-Strony nie otwieraj pod adresem `localhost` — w Twojej przeglądarce to Twój laptop, nie ta
-maszyna. Adres jest w panelu **Ports**. Strona przeładowuje się sama po zmianie kodu; gdy
-odpowiedzi wyglądają na stare, zatrzymaj ją (`Ctrl+C`) i uruchom ponownie.
+Do not open the page at a `localhost` address — in your browser that is your laptop, not this
+machine. The address is in the **Ports** panel. The page reloads itself after a code change; when
+the answers look stale, stop it (`Ctrl+C`) and start it again.
 
-## Gdzie co jest
+## Where things are
 
-| Co | Gdzie |
+| What | Where |
 |---|---|
-| Wygląd aplikacji | `opscopilot/webapp/static/theme.css`, `opscopilot/webapp/static/branding.json` |
-| Zasady dla asystenta kodu (Twoje) | `.clinerules/moje-zasady.md` |
-| Kontekst projektu dla asystenta kodu | `.clinerules/projekt.md` |
-| Etap planu w toku (ustawia go `~/workshop/bin/krok`) | `.clinerules/aktualny-etap.md` |
-| Kod aplikacji | `opscopilot/` |
-| Udawane systemy firmy (gotowe) | `norddesk_mcp/` (zgłoszenia), `nordwiki_mcp/` (wiki) |
-| Dane | `data/` — zgłoszenia, strony wiki, historia incydentów, zestawy testowe |
-| Stan w trakcie pracy (poza git) | `var/` — baza zgłoszeń, dziennik audytu, indeks, pamięć rozmów |
-| Wymagania i testy odbiorcze (tylko do odczytu) | `~/workshop/specs/`, `~/workshop/tests/` |
+| The app's look | `opscopilot/webapp/static/theme.css`, `opscopilot/webapp/static/branding.json` |
+| Rules for the coding assistant (yours) | `.clinerules/moje-zasady.md` |
+| Project context for the coding assistant | `.clinerules/projekt.md` |
+| The plan stage in progress (set by `~/workshop/bin/krok`) | `.clinerules/aktualny-etap.md` |
+| Application code | `opscopilot/` |
+| The company's fake systems (ready) | `norddesk_mcp/` (tickets), `nordwiki_mcp/` (wiki) |
+| Data | `data/` — tickets, wiki pages, incident history, test sets |
+| Working state (outside git) | `var/` — ticket database, audit log, index, conversation memory |
+| Requirements and acceptance tests (read-only) | `~/workshop/specs/`, `~/workshop/tests/` |

@@ -2,7 +2,9 @@
 """bin/undo — reverse the last bin/checkpoint: the project goes back to the commit made just
 before it (git reset --hard <that commit> && git clean -fd). Anything changed after the
 checkpoint is first committed onto a backup branch, so even the undo loses nothing.
-Ignored files (var/: the ticket store, the audit log, the index) are not touched."""
+Ignored files (var/: the ticket store, the audit log, the index) are not touched.
+
+ENGLISH TESTER BRANCH: a translation of the Polish course's bin/undo; same logic."""
 
 from __future__ import annotations
 
@@ -19,31 +21,31 @@ def main(argv: list[str]) -> int:
     log = project / ".git" / UNDO_FILE
     lines = log.read_text(encoding="utf-8").splitlines() if log.exists() else []
     if not lines:
-        fail("Nie ma czego cofać: w tym projekcie nie było jeszcze żadnego checkpointu.")
+        fail("Nothing to undo: there has been no checkpoint in this project yet.")
     step, before, after = lines[-1].split()
 
     head = git("rev-parse", "HEAD", cwd=project).stdout.strip()
     dirty = bool(git("status", "--porcelain", cwd=project).stdout.strip())
     later = head != after or dirty
-    print(f"Cofam checkpoint {step}: projekt wróci do stanu sprzed niego.")
+    print(f"Undoing checkpoint {step}: the project goes back to its state before it.")
     if later:
         print(
-            "Po checkpoincie były jeszcze zmiany — zapiszę je na zapasowej gałęzi, "
-            "żeby nic nie zginęło."
+            "There were changes after the checkpoint — I will save them on a backup branch "
+            "so nothing is lost."
         )
-    if not confirm("Kontynuować? Wpisz TAK i Enter: ", "--tak" in argv):
-        print("Przerwano. Nic nie zostało zmienione.")
+    if not confirm("Continue? Type YES and Enter: ", "--tak" in argv):
+        print("Cancelled. Nothing was changed.")
         return 1
 
     if later:
-        commit_all(project, f"Zmiany po checkpoincie {step} (zapisane przed cofnięciem)")
+        commit_all(project, f"Changes after checkpoint {step} (saved before undo)")
         branch = f"zapas/przed-cofnieciem-{step}-{time.strftime('%H%M%S')}"
         git("branch", branch, cwd=project)
-        print(f"Zapisane na gałęzi: {branch}")
+        print(f"Saved on branch: {branch}")
     git("reset", "-q", "--hard", before, cwd=project)
     git("clean", "-q", "-fd", cwd=project)  # untracked files only; never -x (var/ stays)
     log.write_text("".join(ln + "\n" for ln in lines[:-1]), encoding="utf-8")
-    print(f"Gotowe: projekt jest znowu w stanie sprzed checkpointu {step}.")
+    print(f"Done: the project is back in its state before checkpoint {step}.")
     return 0
 
 

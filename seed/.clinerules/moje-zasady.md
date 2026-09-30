@@ -1,4 +1,4 @@
-# Moje zasady dla agenta
+# My rules for the agent
 
-<!-- Wpisz tu co najmniej trzy zasady, których agent ma się trzymać przez cały czas pracy nad
-     projektem — jako punkty listy („- …"). Ten plik jest Twój: nikt go nie nadpisze. -->
+<!-- Write at least three rules here that the agent must follow for the whole time it works on
+     the project — as list items ("- …"). This file is yours: nothing overwrites it. -->

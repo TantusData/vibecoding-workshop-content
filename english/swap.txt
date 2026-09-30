@@ -1,0 +1,10 @@
+# sha256 of a Polish project file  ->  its English version in ~/workshop (bin/checkpoint)
+1b2c0a07f49215186981a781c6cdb085fcc574c5868576d3f6cd37bdfdafd1ef  seed/.clinerules/moje-zasady.md
+28fe0582946c7b8eff9448d9552468455d10e14e79cf29caf2e6e846d4b6ab7a  seed/.clinerules/projekt.md
+db15eb4fc7738f210bc1670470f6cae64ee42994ef05cf1f9e7e44fdc3f2bccd  seed/HANDOVER_NOTE.md
+437137b8cb44abb4a4256384bbac9a36dc1451d0ec50d4a00f770d57de810f5f  seed/README.md
+eef5697a81b6ca6cf7cabecab9f3a86d8cc7a314eff82db4263cca0e6a21d8d8  seed/opscopilot/webapp/__main__.py
+05f9f22c0deaab0afff1f4d2f82a99cf1e30d735a9b42f5211933727e99e6f67  seed/opscopilot/webapp/static/branding.json
+38204c9c8dc5fb84314003b3acd35c65f88d313805cac213ecbc01cfbdce2c11  seed/opscopilot/webapp/static/index.html
+2ae28275ec1b5cab2270919c73b1072c5d43b8321c46efa815c3ca86eb96fcd9  english/example/moje-zasady.md
+73e18d4b9a7062664c29d25015c48c0316e590f100a190947d328af707c00625  english/example/branding.json

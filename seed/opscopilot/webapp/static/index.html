@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pl">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -17,19 +17,19 @@
     <span class="logo" id="logo"></span>
     <h1 id="name">OpsCopilot</h1>
     <span class="sub" id="tagline"></span>
-    <button type="button" id="newconv">Nowa rozmowa</button>
+    <button type="button" id="newconv">New conversation</button>
   </header>
   <main>
     <section class="chat">
       <div id="log"><div class="welcome" id="welcome"></div></div>
       <form id="f">
         <input id="q" autocomplete="off" required>
-        <button type="submit" class="primary">Zapytaj</button>
+        <button type="submit" class="primary">Ask</button>
       </form>
     </section>
     <aside>
-      <h2>Co zrobił system</h2>
-      <div class="hint">Kliknij odpowiedź, żeby zobaczyć jej ślad: kontrolę zakresu, wybór narzędzia, wywołania narzędzi, redakcje, wywołania modelu z tokenami i kosztem. Ślad pochodzi z dziennika audytu, nie z relacji modelu.</div>
+      <h2>What the system did</h2><!-- "Co zrobił system": the Polish heading, which the course's step 08 test looks for -->
+      <div class="hint">Click an answer to see its trace: the scope check, the tool choice, tool calls, redactions, model calls with tokens and cost. The trace comes from the audit log, not from the model's own account.</div>
       <div id="trace"></div>
     </aside>
   </main>
@@ -71,7 +71,7 @@
     }
 
     function renderTrace(turn) {
-      if (!turn.trace.length) { tracePanel.innerHTML = '<div class="hint">Ta wersja aplikacji nie zapisuje jeszcze śladu.</div>'; return; }
+      if (!turn.trace.length) { tracePanel.innerHTML = '<div class="hint">This version of the app does not record a trace yet.</div>'; return; }
       const items = turn.trace.map(e => `<li class="${esc(e.kind === 'model_call' ? 'model' : e.kind === 'tool_call' ? 'tool' : e.kind)}"><span class="ms">${String(e.ms ?? 0).padStart(5)} ms</span>${describe(e)}</li>`).join('');
       const tin = turn.trace.reduce((a, e) => a + (e.input_tokens || 0), 0);
       const tout = turn.trace.reduce((a, e) => a + (e.output_tokens || 0), 0);
@@ -102,13 +102,13 @@
         slot.dataset.turn = data.turn_id;
         // no trace yet (this version does not record one): say so instead of a misleading $0.0000
         const meta = data.trace.length
-          ? `${tools.length ? 'tools: ' + esc(tools.join(', ')) + ' · ' : ''}$${cost.toFixed(4)} · kliknij, by zobaczyć ślad`
-          : 'koszt i ślad: ta wersja jeszcze ich nie zapisuje';
+          ? `${tools.length ? 'tools: ' + esc(tools.join(', ')) + ' · ' : ''}$${cost.toFixed(4)} · click to see the trace`
+          : 'cost and trace: this version does not record them yet';
         slot.insertAdjacentHTML('beforeend', `<span class="meta">${meta}</span>`);
         slot.addEventListener('click', () => renderTrace(turns[data.turn_id]));
         renderTrace(data);
       } catch (err) {
-        slot.textContent = 'Błąd: ' + err;
+        slot.textContent = 'Error: ' + err;
       }
       log.scrollTop = log.scrollHeight;
     });

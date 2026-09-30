@@ -1,14 +1,14 @@
-# Pliki uczestnika, których ~/workshop/bin/checkpoint nie nadpisze, jeśli różnią się od wersji
-# startowej (~/workshop/seed). Niezmieniony plik startowy checkpoint może uzupełnić.
-# Jedna ścieżka na linię, względem ~/work/project; wzorce jak w powłoce (*), katalog kończy się /.
+# The participant's files that ~/workshop/bin/checkpoint will not overwrite if they differ from the
+# starting version (~/workshop/seed). An unchanged starting file may be filled in by a checkpoint.
+# One path per line, relative to ~/work/project; shell-style patterns (*), a folder ends with /.
 
-# krok 01: wygląd aplikacji i Twoje zasady dla agenta
+# step 01: the app's look and your rules for the agent
 opscopilot/webapp/static/theme.css
 opscopilot/webapp/static/branding.json
 .clinerules/moje-zasady.md
 
-# krok 05: zestaw testowy zabezpieczeń — decyzja zespołu, nie kod
+# step 05: the guardrail test set — a team decision, not code
 data/eval/guardrail_gold.jsonl
 
-# lokalne ustawienia (jeśli ktoś je utworzy)
+# local settings (if anyone creates them)
 .env

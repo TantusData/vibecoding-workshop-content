@@ -45,4 +45,4 @@ def pytest_collection_modifyitems(config, items):
         mark = item.get_closest_marker("step")
         if mark and mark.args and int(mark.args[0]) > STEP:
             n = int(mark.args[0])
-            item.add_marker(pytest.mark.skip(reason=f"należy do kroku {n:02d}"))
+            item.add_marker(pytest.mark.skip(reason=f"belongs to step {n:02d}"))

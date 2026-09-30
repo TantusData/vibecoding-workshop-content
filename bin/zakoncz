@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """bin/zakoncz N — finish a step: the one predictable moment of "done".
 
+ENGLISH TESTER BRANCH: the manual checks shown come from GUIDE_EN.md (same number and order as
+the Polish page's); answer y or n.
+
 Runs bin/sprawdz for the step (must be green), then walks the step's manual checks ONE BY ONE
 and asks the participant whether each gave the expected result — green tests are not enough (a
 trial run finished step 02 with green tests and a broken app). Any "no" leaves the step open.
@@ -34,19 +37,19 @@ from _warsztat import (  # noqa: E402
     unlocked,
 )
 
-USAGE = """Użycie: ~/workshop/bin/zakoncz N      (N = 1…8; części: 3a, 3b, 7a, 7b)
+USAGE = """Usage: ~/workshop/bin/zakoncz N      (N = 1…8; parts: 3a, 3b, 7a, 7b)
 
-Kończy krok: sprawdza testy, pokazuje sprawdzenia ręczne, pyta o potwierdzenie i zapisuje
-(commit) Twój projekt. Po tym poleceniu krok jest zrobiony."""
+Finishes a step: checks the tests, shows the manual checks, asks for confirmation and saves
+(commits) your project. After this command the step is done."""
 
 
 def main(argv: list[str]) -> int:
     unit = parse(argv, USAGE, part_a_of_split=True)
     if not unlocked(unit):
-        fail(f"Krok {label(unit)} nie jest jeszcze rozpoczęty (~/workshop/bin/krok).", 4)
+        fail(f"Step {label(unit)} has not been started yet (~/workshop/bin/krok).", 4)
     ensure_project_repo(PROJECT)
     arg = check_arg(unit)
-    print(f"1/3 Testy kroku {label(unit)}…", flush=True)
+    print(f"1/3 Tests of step {label(unit)}…", flush=True)
     r = subprocess.run(
         [sys.executable, str(Path(__file__).with_name("sprawdz")), arg],
         capture_output=True,
@@ -54,39 +57,39 @@ def main(argv: list[str]) -> int:
     )
     if r.returncode != 0:
         print(r.stdout[-3000:], r.stderr[-2000:])
-        fail(f"\nKrok {label(unit)} nie jest jeszcze zrobiony — testy nie przechodzą (wyżej).")
-    print("    ZALICZONE.\n")
+        fail(f"\nStep {label(unit)} is not done yet — the tests do not pass (above).")
+    print("    PASSED.\n")
 
     checks = manual_checks(unit)
-    print(f"2/3 Sprawdzenia ręczne ({len(checks)}) — wykonaj każde i oceń wynik:\n")
+    print(f"2/3 Manual checks ({len(checks)}) — do each one and judge the result:\n")
     assume_yes = "--tak" in argv
     for i, check in enumerate(checks, 1):
         print(plain(check) + "\n")
-        question = f"   Sprawdzenie {i}/{len(checks)}: wynik zgodny z oczekiwanym? (t/n): "
+        question = f"   Check {i}/{len(checks)}: result as expected? (y/n): "
         if not confirm(question, assume_yes):
             print(
-                f"\nKrok {label(unit)} nie jest zakończony: sprawdzenie {i} nie dało oczekiwanego "
-                "wyniku.\nOpisz agentowi, co widać (objaw, nie przyczynę), i poproś "
-                "najpierw o diagnozę. Potem uruchom zakoncz jeszcze raz."
+                f"\nStep {label(unit)} is not finished: check {i} did not give the expected "
+                "result.\nDescribe to the agent what you see (the symptom, not the cause) and ask "
+                "for a diagnosis first. Then run zakoncz again."
             )
             return 1
         print()
     if not checks:
-        print("(ten krok nie ma sprawdzeń ręcznych)\n")
+        print("(this step has no manual checks)\n")
 
-    sha = commit_all(PROJECT, f"Krok {label(unit)}: zakończony — {TITLES[unit]}")
+    sha = commit_all(PROJECT, f"Step {label(unit)}: finished — {TITLES[unit]}")
     with (PROJECT / ".git" / DONE_FILE).open("a", encoding="utf-8") as fh:
         fh.write(f"{unit} {sha} {time.strftime('%Y-%m-%d %H:%M')}\n")
-    print(f"\n3/3 Zapisano (commit {sha[:7]}).\n\n✅ KROK {label(unit)} ZAKOŃCZONY.")
+    print(f"\n3/3 Saved (commit {sha[:7]}).\n\n✅ STEP {label(unit)} FINISHED.")
 
     nxt = UNITS[UNITS.index(unit) + 1] if unit != UNITS[-1] else None
     if nxt is None:
-        print("To był ostatni krok. Gratulacje — projekt Tomasza jest skończony.")
+        print("That was the last step. Congratulations — Tomasz's project is finished.")
     else:
         cmd = f"{int(nxt[:2])}{'b' if nxt.endswith('b') else ''}"
-        print(f"\nNastępnie: krok {label(nxt)} — {TITLES[nxt]}")
+        print(f"\nNext: step {label(nxt)} — {TITLES[nxt]}")
         if nxt.endswith("b"):
-            print("Zanim zaczniesz część B, prowadzący przeprowadzi odkrycie i krótką dyskusję.")
+            print("Before you start part B, the leader runs a short discovery and discussion.")
         print(f"Start:  ~/workshop/bin/krok {cmd}")
     return 0
 

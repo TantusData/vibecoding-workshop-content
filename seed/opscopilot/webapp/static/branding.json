@@ -1,7 +1,7 @@
 {
   "name": "OpsCopilot",
-  "tagline": "prototyp asystenta IT/OT — Nordfarm Foods",
+  "tagline": "IT/OT assistant prototype — Nordfarm Foods",
   "logo": "",
-  "welcome": "Zadaj pytanie. Na razie to zwykłe wywołanie modelu: bez zgłoszeń, bez dokumentacji, bez wiedzy o naszych systemach.",
-  "placeholder": "np. Jakiego adresu VPN mam używać z domu?"
+  "welcome": "Ask a question. For now this is a plain model call: no tickets, no documentation, no knowledge of our systems.",
+  "placeholder": "e.g. Which VPN address should I use from home?"
 }

@@ -23,13 +23,13 @@ import uvicorn
 PROJECT = Path(__file__).resolve().parents[2]
 
 MESSAGE = """
-OpsCopilot działa (port {port}). Zatrzymanie: Ctrl+C w tym terminalu.
+OpsCopilot is running (port {port}). To stop it: Ctrl+C in this terminal.
 
-Jak otworzyć stronę:
-  1. Otwórz panel PORTS (na dole okna, obok TERMINAL).
-  2. Przy porcie {port} kliknij adres — albo skopiuj go i otwórz przez
+How to open the page:
+  1. Open the PORTS panel (at the bottom of the window, next to TERMINAL).
+  2. Next to port {port} click the address — or copy it and open it with
      Ctrl+Shift+P -> "Simple Browser: Show".
-Nie wpisuj adresu z "localhost" — w Twojej przeglądarce to Twój laptop, nie ta maszyna.
+Do not type an address with "localhost" — in your browser that is your laptop, not this machine.
 """
 
 
