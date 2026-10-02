@@ -1,0 +1,7 @@
+# stan w trakcie pracy: baza zgłoszeń, dziennik audytu, indeks, pamięć rozmów, wytrenowany model
+var/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+.clinerules/aktualny-etap.md
