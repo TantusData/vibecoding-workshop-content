@@ -1,0 +1,17 @@
+/* theme.css — how YOUR OpsCopilot looks (an example look: Nordfarm green). */
+:root {
+  --bg: #eef3ef;
+  --panel: #ffffff;
+  --ink: #17301f;
+  --muted: #5f7466;
+  --line: #d3e0d6;
+  --bubble: #f1f6f2;
+  --accent: #2f7d4a;
+  --accent-ink: #ffffff;
+  --ok: #1a7f4b; --warn: #b45309; --bad: #b42318;
+  --font: "Segoe UI", system-ui, sans-serif;
+  --size: 15px;
+  --mono: ui-monospace, Menlo, monospace;
+  --radius: 12px;
+}
+header { border-bottom: 3px solid var(--accent); }

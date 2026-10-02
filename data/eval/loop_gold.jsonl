@@ -1,0 +1,5 @@
+{"id": "ticket-then-procedure", "question": "Check INC-1042 and tell me the lockout procedure for that palletiser.", "expected_tools": ["get_ticket", "search_docs"], "must_include": ["P3-07", "20"]}
+{"id": "status-then-runbook", "question": "What's wrong with INC-1039 and what does our runbook say about restarting that MES?", "expected_tools": ["get_ticket", "search_docs"], "must_include": ["Core Service"]}
+{"id": "oncall-and-open-p1", "question": "Who is on call for OT tonight, and is there any open P1 they should know about?", "expected_tools": ["get_oncall", "search_tickets"], "must_include": ["Piotr", "INC-1042"]}
+{"id": "single-tool-still-single", "question": "Which VPN gateway address should I use from home?", "expected_tools": ["search_docs"], "max_tools": 2, "must_include": ["vpn2.nordfarm.example"]}
+{"id": "chat-no-tools", "question": "Hello, who are you?", "expected_tools": [], "max_tools": 0}
