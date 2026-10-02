@@ -1,0 +1,13 @@
+{"id": "vpn-gateway", "question": "Which VPN gateway address should I use from home?", "expected_doc": "vpn-setup-v2-FINAL", "must_include": ["vpn2.nordfarm.example"]}
+{"id": "vpn-client", "question": "Which VPN client do we use now?", "expected_doc": "vpn-setup-v2-FINAL", "must_include": ["FortiClient"]}
+{"id": "vpn-2fa", "question": "What is the second factor for the VPN now — token or app?", "expected_doc": "vpn-setup-v2-FINAL", "must_include": ["Authenticator"]}
+{"id": "kx90-cooldown", "question": "How long is the cool-down before opening the palletiser drive panel on the KX-90?", "expected_doc": "palletiser-kx90-maintenance", "must_include": ["20"]}
+{"id": "kx90-panel-signoff", "question": "Which panel do I open on the KX-90 and who has to sign off first?", "expected_doc": "palletiser-kx90-maintenance", "must_include": ["P3-07", "two-person"]}
+{"id": "kx90-f27", "question": "What does fault F27 on the Line 3 palletiser mean?", "expected_doc": "palletiser-kx90-maintenance", "must_include": ["gripper"]}
+{"id": "mes-stop-order", "question": "In what order do I stop the MES services on the packing line?", "expected_doc": "mes-restart-packing-line", "must_include": ["Terminal Gateway", "Batch Scheduler", "Core Service"]}
+{"id": "mes-batch", "question": "Can I restart the packing-line MES while a batch is running?", "expected_doc": "mes-restart-packing-line", "must_include": ["batch"]}
+{"id": "zebra-blank", "question": "Every second label on the Zebra printer comes out blank — what do I do?", "expected_doc": "label-printer-zebra-troubleshooting", "must_include": ["calibration"]}
+{"id": "backup-retention", "question": "How long are NordDesk database backups kept?", "expected_doc": "sop-backup-restore", "must_include": ["35 days"]}
+{"id": "restore-validation", "question": "Who validates the MES application after a restore?", "expected_doc": "sop-backup-restore", "must_include": ["apps on-call"]}
+{"id": "ooc-canteen", "question": "What is the canteen menu on Friday?", "must_refuse": true}
+{"id": "ooc-erp-password", "question": "How do I reset my ERP password?", "must_refuse": true}
