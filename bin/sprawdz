@@ -1,0 +1,133 @@
+#!/usr/bin/env python3
+"""bin/sprawdz N — is step N done? Runs the tests of every started step up to N on ~/work/project.
+
+"Done" is a green run of this command, never a judgement call: the step's own tests plus every
+earlier step's (so a later change that breaks an earlier step shows up). Always offline: the
+model and the embeddings are faked, nothing is spent — so the agent may run it after every change.
+`sprawdz 3a` checks step 03 part A only; `sprawdz 3` (= `3b`) the whole step once part B is
+started. Refuses to run if the course material was changed — a tracked file under ~/workshop, or
+an unlocked step file that no longer matches materialy.sha256: an agent that edits a test until it
+passes has not finished the step. `bin/sprawdz przywroc` puts everything back.
+"""
+
+from __future__ import annotations
+
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _warsztat import (  # noqa: E402
+    PROJECT,
+    UNITS,
+    WS,
+    fail,
+    git,
+    label,
+    parse,
+    tampered_materials,
+    unit_dirs,
+    units_upto,
+    unlock,
+    unlocked,
+)
+
+USAGE = """Użycie: ~/workshop/bin/sprawdz N      (N = 1…8; części: 3a, 3b, 7a, 7b)
+
+Uruchamia testy rozpoczętych kroków do N włącznie na Twoim projekcie (~/work/project). Krok jest
+zrobiony, gdy wynik jest ZALICZONY. Bez modelu i bez kosztów — wszystko dzieje się lokalnie."""
+
+
+def tracked_changes() -> list[str]:
+    r = git("status", "--porcelain", "--untracked-files=all", cwd=WS, check=False)
+    return [
+        ln for ln in r.stdout.splitlines() if "__pycache__" not in ln and ".pytest_cache" not in ln
+    ]
+
+
+def restore() -> int:
+    git("checkout", "--", ".", cwd=WS)
+    git("clean", "-q", "-fd", cwd=WS)  # untracked, not ignored: unlocked steps stay
+    again = unlock([u for u in UNITS if unlocked(u)], force=True)
+    print(
+        "Materiały kursu (~/workshop) są z powrotem w oryginalnej wersji"
+        + (f" (pobrano ponownie: {', '.join(label(u) for u in again)})." if again else ".")
+    )
+    return 0
+
+
+def main(argv: list[str]) -> int:
+    if argv[:1] == ["przywroc"]:
+        return restore()
+    unit = parse(argv, USAGE, part_a_of_split=False)
+    venv = Path("/opt/venv")
+    if venv.is_dir() and not (venv / ".ready").exists():
+        fail("Python na tej maszynie jeszcze się instaluje (ok. 70 s po starcie). Spróbuj zaraz.")
+    if not PROJECT.is_dir():
+        fail(f"Nie ma katalogu projektu {PROJECT}. Zawołaj trenera.")
+
+    # `sprawdz 3` before part B is started means: check part A
+    if unit.endswith("b") and not unlocked(unit) and not any(a.lower().endswith("b") for a in argv):
+        unit = unit[:2]
+    if not unlocked(unit):
+        fail(
+            f"Krok {label(unit)} nie jest jeszcze rozpoczęty. Najpierw:\n"
+            f"  ~/workshop/bin/krok {int(unit[:2])}{'b' if unit.endswith('b') else ''}",
+            4,
+        )
+
+    changed = tracked_changes() + tampered_materials()
+    if changed:
+        print(
+            "STOP: ktoś (może agent) zmienił materiały kursu w ~/workshop:\n"
+            + "\n".join("  " + ln for ln in changed[:20])
+            + "\n\nTesty i opisy kroków są wzorcem — ich zmiana nie zalicza kroku.\n"
+            "Pracujemy tylko w ~/work/project. Przywróć materiały poleceniem:\n"
+            "  ~/workshop/bin/sprawdz przywroc\n"
+            "i uruchom sprawdzanie jeszcze raz.",
+            file=sys.stderr,
+        )
+        return 3
+
+    units = [u for u in units_upto(unit) if unlocked(u)]
+    dirs = [str(unit_dirs(u)[2]) for u in units if unit_dirs(u)[2].is_dir()]
+    env = dict(
+        os.environ,
+        OPSCOPILOT_PROJECT=str(PROJECT),
+        WORKSHOP_STEP=str(int(unit[:2])),
+        PYTHONDONTWRITEBYTECODE="1",
+        LLM_PROVIDER="fake",
+        EMBEDDINGS_BACKEND="fake",
+        OPSCOPILOT_AUTO_APPROVE="1",
+        PYTHONHASHSEED="0",
+    )
+    tests = WS / "tests"
+    print(f"Sprawdzam krok {label(unit)} (testy: {', '.join(units)}) na {PROJECT} …\n", flush=True)
+    cmd = [sys.executable, "-m", "pytest", "-c", str(tests / "pytest.ini"), "--rootdir", str(tests)]
+    code = subprocess.run([*cmd, *dirs], cwd=PROJECT, env=env).returncode
+    arg = f"{int(unit[:2])}{'b' if unit.endswith('b') else ('a' if unit in ('03', '07') else '')}"
+    if code == 0:
+        # the agent reads this too: no pointer to the person's page, only who does what next
+        print(
+            f"\n✅ KROK {label(unit)}: testy ZALICZONE.\n"
+            "Sprawdzenia ręczne wykonuje człowiek, nie agent — pokaże je i o każde zapyta:\n"
+            f"  ~/workshop/bin/zakoncz {arg}"
+        )
+    elif code == 1:
+        print(
+            f"\n❌ KROK {label(unit)}: jeszcze NIE. Czerwone testy są wypisane wyżej — ich nazwy "
+            "mówią, czego brakuje.\nPokaż ten wynik agentowi: „Uruchom ~/workshop/bin/sprawdz "
+            f"{arg} i napraw kod w ~/work/project, nie zmieniając testów.”"
+        )
+    else:
+        print(
+            f"\n❌ KROK {label(unit)}: jeszcze NIE — testy nie dały się nawet uruchomić "
+            f"(kod {code}).\nNajczęściej brakuje modułu, który ten krok ma dodać, albo w projekcie "
+            "jest błąd składni lub importu. Pierwszy komunikat błędu powyżej mówi, gdzie."
+        )
+    return code
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

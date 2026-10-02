@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+"""bin/undo — reverse the last bin/checkpoint: the project goes back to the commit made just
+before it (git reset --hard <that commit> && git clean -fd). Anything changed after the
+checkpoint is first committed onto a backup branch, so even the undo loses nothing.
+Ignored files (var/: the ticket store, the audit log, the index) are not touched."""
+
+from __future__ import annotations
+
+import sys
+import time
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _warsztat import PROJECT, UNDO_FILE, commit_all, confirm, fail, git  # noqa: E402
+
+
+def main(argv: list[str]) -> int:
+    project = PROJECT
+    log = project / ".git" / UNDO_FILE
+    lines = log.read_text(encoding="utf-8").splitlines() if log.exists() else []
+    if not lines:
+        fail("Nie ma czego cofać: w tym projekcie nie było jeszcze żadnego checkpointu.")
+    step, before, after = lines[-1].split()
+
+    head = git("rev-parse", "HEAD", cwd=project).stdout.strip()
+    dirty = bool(git("status", "--porcelain", cwd=project).stdout.strip())
+    later = head != after or dirty
+    print(f"Cofam checkpoint {step}: projekt wróci do stanu sprzed niego.")
+    if later:
+        print(
+            "Po checkpoincie były jeszcze zmiany — zapiszę je na zapasowej gałęzi, "
+            "żeby nic nie zginęło."
+        )
+    if not confirm("Kontynuować? Wpisz TAK i Enter: ", "--tak" in argv):
+        print("Przerwano. Nic nie zostało zmienione.")
+        return 1
+
+    if later:
+        commit_all(project, f"Zmiany po checkpoincie {step} (zapisane przed cofnięciem)")
+        branch = f"zapas/przed-cofnieciem-{step}-{time.strftime('%H%M%S')}"
+        git("branch", branch, cwd=project)
+        print(f"Zapisane na gałęzi: {branch}")
+    git("reset", "-q", "--hard", before, cwd=project)
+    git("clean", "-q", "-fd", cwd=project)  # untracked files only; never -x (var/ stays)
+    log.write_text("".join(ln + "\n" for ln in lines[:-1]), encoding="utf-8")
+    print(f"Gotowe: projekt jest znowu w stanie sprzed checkpointu {step}.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

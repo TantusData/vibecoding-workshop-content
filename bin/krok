@@ -1,0 +1,89 @@
+#!/usr/bin/env python3
+"""bin/krok N — start a step: unlock its materials, tell the agent, show where you are.
+
+`krok 3` starts step 03 part A, `krok 3b` its part B (only after the part-A discovery), likewise
+for 07. Unlocking is cumulative: `krok 5` also fetches anything earlier that is still missing, so
+`bin/sprawdz 5` can run the tests of steps 01–05. Materials of later steps stay off the disk.
+Then it writes ~/work/project/.clinerules/aktualny-etap.md (the agent's pointer to the current
+stage: its spec and tests, never this page) and prints the step's "Gdzie jestem" and "Pierwsza czynność" sections.
+"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _warsztat import (  # noqa: E402
+    DONE_FILE,
+    PROJECT,
+    check_arg,
+    TITLES,
+    UNITS,
+    label,
+    parse,
+    plain,
+    section,
+    unit_dirs,
+    units_upto,
+    unlock,
+    write_current,
+)
+
+USAGE = """Użycie: ~/workshop/bin/krok N      (N = 1…8; kroki 3 i 7 mają część B: 3b, 7b)
+
+Rozpoczyna krok: pobiera jego opis, wymagania i testy do ~/workshop, mówi agentowi, który krok
+jest bieżący, i pokazuje, od czego zacząć."""
+
+
+def unfinished_warning(unit: str) -> None:
+    """The previous unit's tests run with this one; red ones left there become this step's work."""
+    i = UNITS.index(unit)
+    if i == 0:
+        return
+    prev = UNITS[i - 1]
+    done_file = PROJECT / ".git" / DONE_FILE
+    done = (
+        {ln.split()[0] for ln in done_file.read_text(encoding="utf-8").splitlines() if ln.strip()}
+        if done_file.exists()
+        else set()
+    )
+    if prev in done:
+        return
+    arg = check_arg(prev)
+    print(
+        f"⚠️  Krok {label(prev)} nie jest zakończony (brak ~/workshop/bin/zakoncz {arg}).\n"
+        f"   Jego testy uruchamiają się razem z tym krokiem — jeśli są czerwone, agent będzie je\n"
+        f"   naprawiał tutaj (dłużej i drożej). Najpierw: ~/workshop/bin/sprawdz {arg}, potem\n"
+        f"   ~/workshop/bin/zakoncz {arg}.\n"
+    )
+
+
+def main(argv: list[str]) -> int:
+    unit = parse(argv, USAGE, part_a_of_split=True)
+    need = units_upto(unit)
+    fetched = unlock(need)
+    if fetched:
+        print("Pobrano materiały: " + ", ".join(label(u) for u in fetched) + ".")
+    write_current(PROJECT, unit)
+    unfinished_warning(unit)
+
+    steps_dir, specs_dir, tests_dir = unit_dirs(unit)
+    rel = lambda p: "~/workshop/" + p.relative_to(steps_dir.parent.parent).as_posix()  # noqa: E731
+    print(f"\n=== KROK {label(unit)}: {TITLES[unit]} ===\n")
+    for title in ("Gdzie jestem", "Pierwsza czynność"):
+        text = section(unit, title)
+        if text:
+            print(f"— {title} —\n{plain(text)}\n")
+    print(
+        f"Opis kroku (dla Ciebie):  {rel(steps_dir / 'README.md')}\n"
+        f"Wymagania (dla agenta):   {rel(specs_dir / 'spec.md')}\n"
+        f"Testy:                    {rel(tests_dir)}/\n\n"
+        "W Cline zacznij NOWE zadanie (przycisk +): krótsza rozmowa to lepsze odpowiedzi i niższy\n"
+        "koszt. Agent już wie, który etap planu Tomasza jest w toku (.clinerules/aktualny-etap.md)."
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

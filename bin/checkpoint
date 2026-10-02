@@ -1,0 +1,159 @@
+#!/usr/bin/env python3
+"""bin/checkpoint N — catch up: replace the project with the reference state at the END of step N.
+
+Contract (reversible in one command, bin/undo):
+  1. commit everything in ~/work/project first — nothing the participant made is destroyed;
+  2. fetch refs/checkpoints/NN from the remote into a throw-away bare repo — the snapshot is not
+     on disk before this and nothing of it stays in ~/workshop afterwards;
+  3. show, in Polish, what would be overwritten and ask for confirmation;
+  4. copy the snapshot over the project, skipping every keep.txt path the participant changed;
+  5. commit the result, and record the pre-checkpoint commit for bin/undo;
+  6. run the step's tests and say plainly if any stayed red (a kept file — e.g. the person's own
+     step-05 set — can disagree with the reference code).
+Files the participant added that the snapshot does not have are left alone.
+"""
+
+from __future__ import annotations
+
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _warsztat import (  # noqa: E402
+    PROJECT,
+    UNDO_FILE,
+    check_arg,
+    commit_all,
+    confirm,
+    ensure_project_repo,
+    fetch_refs,
+    is_participants,
+    keep_patterns,
+    label,
+    parse,
+    units_upto,
+    unlock,
+)
+
+USAGE = """Użycie: ~/workshop/bin/checkpoint N      (N = 1…8)
+
+Zastępuje kod projektu gotowym stanem z KOŃCA kroku N (w krokach 3 i 7: razem z częścią B).
+Najpierw zapisuje (commit) wszystko, co masz, więc można to cofnąć jednym poleceniem:
+~/workshop/bin/undo. Twój wygląd aplikacji, Twoje zasady dla agenta i Twój zestaw testowy
+zostają (lista: ~/workshop/keep.txt).
+
+Jeśli brakuje Ci tylko części kroku, lepiej najpierw spróbować bez checkpointu:
+pokaż agentowi ~/workshop/specs/NN/spec.md i wynik ~/workshop/bin/sprawdz N."""
+
+
+def main(argv: list[str]) -> int:
+    unit = parse(argv, USAGE, part_a_of_split=False)
+    n = int(unit[:2])
+    assume_yes = "--tak" in argv
+    project = PROJECT
+    ensure_project_repo(project)
+    patterns = keep_patterns()
+
+    print(f"Pobieram checkpoint {n:02d}…", flush=True)
+    ref = f"refs/checkpoints/{n:02d}"
+    snap = fetch_refs([ref])[ref]
+    paths = sorted(p for p in snap if not p.endswith("\0x"))
+
+    new, changed, kept = [], [], []
+    for rel in paths:
+        mine = project / rel
+        if is_participants(rel, project, patterns):
+            if mine.read_bytes() != snap[rel]:
+                kept.append(rel)
+        elif not mine.exists():
+            new.append(rel)
+        elif mine.read_bytes() != snap[rel]:
+            changed.append(rel)
+
+    print(f"\nCheckpoint {n:02d} = gotowy stan projektu po kroku {n:02d}.")
+    if not new and not changed:
+        print("Projekt ma już dokładnie te pliki — nic do zrobienia.")
+        unlock(units_upto(unit))
+        return 0
+    print(f"\nZostanie NADPISANYCH plików: {len(changed)}")
+    for rel in changed[:40]:
+        print(f"  ~ {rel}")
+    if len(changed) > 40:
+        print(f"  … i {len(changed) - 40} więcej")
+    print(f"Zostanie DODANYCH plików: {len(new)}")
+    for rel in new[:15]:
+        print(f"  + {rel}")
+    if len(new) > 15:
+        print(f"  … i {len(new) - 15} więcej")
+    if kept:
+        print("Twoje pliki, których checkpoint NIE ruszy (keep.txt):")
+        for rel in kept:
+            print(f"  = {rel}")
+    print(
+        "\nNajpierw zapiszę (commit) obecny stan projektu, więc wszystko da się cofnąć:\n"
+        "  ~/workshop/bin/undo\n"
+        "Cofnięcie przywraca pliki — ale gotowe rozwiązanie kroku zobaczysz Ty i Twój agent."
+    )
+    if not confirm("\nKontynuować? Wpisz TAK i Enter: ", assume_yes):
+        print("Przerwano. Nic nie zostało zmienione.")
+        return 1
+
+    before = commit_all(project, f"Stan przed checkpointem {n:02d}")
+    for rel in new + changed:
+        dst = project / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_bytes(snap[rel])
+        if rel + "\0x" in snap:
+            dst.chmod(0o755)
+    after = commit_all(project, f"Checkpoint {n:02d}: gotowy stan po kroku {n:02d}")
+    with (project / ".git" / UNDO_FILE).open("a", encoding="utf-8") as fh:
+        fh.write(f"{n:02d} {before} {after}\n")
+    opened = unlock(units_upto(unit))  # a jump ahead still gets the pages and tests up to N
+
+    print(
+        f"\nGotowe: projekt jest w stanie po kroku {n:02d} "
+        f"({len(changed)} nadpisanych, {len(new)} dodanych plików).\n"
+        + (f"Pobrano materiały kroków: {', '.join(label(u) for u in opened)}.\n" if opened else "")
+        + f"Sprawdź:  ~/workshop/bin/sprawdz {n}\n"
+        "Cofnij:   ~/workshop/bin/undo\n"
+        "Jeśli aplikacja była uruchomiona, zrestartuj ją (Ctrl+C, potem znowu "
+        "python -m opscopilot.webapp)."
+    )
+    if os.environ.get("WORKSHOP_NO_CHECK") != "1":
+        report_red(unit)
+    return 0
+
+
+def report_red(unit: str) -> None:
+    arg = check_arg(unit)
+    print(f"\nSprawdzam testy kroku po checkpoincie (~/workshop/bin/sprawdz {arg})…", flush=True)
+    r = subprocess.run(
+        [sys.executable, str(Path(__file__).with_name("sprawdz")), arg],
+        capture_output=True,
+        text=True,
+    )
+    if r.returncode == 0:
+        print("✅ Testy kroku przechodzą.")
+        return
+    failed = [
+        ln.split(" - ")[0].removeprefix("FAILED ")
+        for ln in r.stdout.splitlines()
+        if ln.startswith("FAILED ")
+    ]
+    print(
+        "⚠️  UWAGA: po checkpoincie testy kroku NIE są zielone"
+        + (f" ({len(failed)}):" if failed else ".")
+    )
+    for name in failed[:10]:
+        print(f"   ✗ {name}")
+    print(
+        "   Najczęściej to Twój własny plik, którego checkpoint nie nadpisał (lista wyżej, keep.txt) —\n"
+        "   np. zestaw z kroku 05, którego reguły wzorcowe nie rozstrzygają. Dokończ to z agentem\n"
+        f"   (pokaż mu wynik ~/workshop/bin/sprawdz {arg}), zanim zaczniesz następny krok."
+    )
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
