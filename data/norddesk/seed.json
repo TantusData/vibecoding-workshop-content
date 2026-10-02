@@ -1,0 +1,136 @@
+{
+  "_comment": "Hand-authored NordDesk seed. Never edited by the server — `make setup` copies it to var/norddesk.json, which is what the server reads and writes. All people, phone numbers and credentials are fictional.",
+  "systems": [
+    {"id": "palletiser-l3", "name": "Line 3 palletiser (KX-90)", "owner_team": "ot", "criticality": "high", "status": "degraded", "location": "Packing hall, Line 3"},
+    {"id": "mes-packing", "name": "Packing-line MES", "owner_team": "apps", "criticality": "high", "status": "operational", "location": "Server room A / virtual"},
+    {"id": "label-printer-l2", "name": "Line 2 label printer (Zebra ZT411)", "owner_team": "servicedesk", "criticality": "medium", "status": "operational", "location": "Packing hall, Line 2"},
+    {"id": "vpn", "name": "Remote access VPN", "owner_team": "infra", "criticality": "high", "status": "operational", "location": "DMZ"},
+    {"id": "wifi-coldstore", "name": "Wi-Fi — cold store", "owner_team": "infra", "criticality": "medium", "status": "operational", "location": "Cold store B"},
+    {"id": "erp", "name": "ERP (Dynamics)", "owner_team": "apps", "criticality": "high", "status": "operational", "location": "Cloud"},
+    {"id": "scada-l1", "name": "Line 1 SCADA", "owner_team": "ot", "criticality": "high", "status": "operational", "location": "Processing hall, Line 1"}
+  ],
+  "oncall": [
+    {"team": "ot", "shift": "day", "name": "Marek Zieliński", "phone": "+48 600 100 201"},
+    {"team": "ot", "shift": "night", "name": "Piotr Wiśniewski", "phone": "+48 600 100 202"},
+    {"team": "infra", "shift": "day", "name": "Anna Kowalczyk", "phone": "+48 600 100 301"},
+    {"team": "infra", "shift": "night", "name": "Tomasz Lewandowski", "phone": "+48 600 100 302"},
+    {"team": "servicedesk", "shift": "day", "name": "Marta Nowak", "phone": "ext. 4411"},
+    {"team": "servicedesk", "shift": "night", "name": "Kamil Wójcik", "phone": "ext. 4412"},
+    {"team": "apps", "shift": "day", "name": "Agnieszka Dąbrowska", "phone": "+48 600 100 401"}
+  ],
+  "assets": [
+    {"tag": "NF-PLT-003", "system": "palletiser-l3", "model": "KX-90", "vendor": "Kramer Automation", "installed": "2017-03", "service_contract": "yes"},
+    {"tag": "NF-PRN-L2-01", "system": "label-printer-l2", "model": "Zebra ZT411", "vendor": "Zebra", "installed": "2022-09", "service_contract": "no"},
+    {"tag": "NF-SRV-MES-01", "system": "mes-packing", "model": "VM (Windows Server 2022)", "vendor": "internal", "installed": "2023-01", "service_contract": "n/a"},
+    {"tag": "NF-FW-DMZ-01", "system": "vpn", "model": "FortiGate 200F", "vendor": "Fortinet", "installed": "2021-06", "service_contract": "yes"}
+  ],
+  "tickets": [
+    {
+      "id": "INC-1042",
+      "type": "incident",
+      "system": "palletiser-l3",
+      "urgency": "P1",
+      "team": "ot",
+      "status": "open",
+      "summary": "Line 3 palletiser stopped — fault F27 on the HMI, line at standstill",
+      "description": "Palletiser on Line 3 stopped at 06:12 with fault F27 (gripper position). Operators tried a reset from the HMI twice, fault returns within a minute. Line 3 is at standstill, ~14 pallets/hour lost. Reported by shift lead. Initially logged by the portal as 'printer issue' because the operator picked the wrong category.",
+      "reporter": "Marek Zieliński",
+      "created_at": "2026-09-11T06:18:00+02:00",
+      "updated_at": "2026-09-11T07:05:00+02:00",
+      "updates": [
+        {"at": "2026-09-11T06:25:00+02:00", "author": "Marta Nowak", "text": "Re-categorised from 'printer' to OT / palletiser-l3, raised to P1 — line down."},
+        {"at": "2026-09-11T06:40:00+02:00", "author": "Marek Zieliński", "text": "On site. Gripper sensor S3 looks misaligned after last night's cleaning. Will follow the lockout procedure before touching anything."},
+        {"at": "2026-09-11T07:05:00+02:00", "author": "Marek Zieliński", "text": "Lockout done, waiting for the mandatory cool-down before opening panel. Vendor (Kramer) informed, no callback yet."}
+      ]
+    },
+    {
+      "id": "INC-1039",
+      "type": "incident",
+      "system": "mes-packing",
+      "urgency": "P2",
+      "team": "apps",
+      "status": "in_progress",
+      "summary": "Packing-line MES not accepting new batch orders after Sunday patching",
+      "description": "Since the Sunday maintenance window the MES on the packing line refuses new batch orders with 'service unavailable'. Existing batches run. Restart of the MES application service is probably needed.",
+      "reporter": "Agnieszka Dąbrowska",
+      "created_at": "2026-09-10T22:40:00+02:00",
+      "updated_at": "2026-09-11T05:55:00+02:00",
+      "updates": [
+        {"at": "2026-09-10T23:10:00+02:00", "author": "Tomasz Lewandowski", "text": "Looks like the MES app service didn't come back after the reboot. Someone from apps needs to restart it in the right order — see the wiki page on restarting the packing-line MES."},
+        {"at": "2026-09-11T05:55:00+02:00", "author": "Agnieszka Dąbrowska", "text": "For whoever picks this up on day shift: the local admin on NF-SRV-MES-01 is mesadmin / Nordf@rm2026! — I know, I know, will rotate it after. Don't restart during a running batch."}
+      ]
+    },
+    {
+      "id": "INC-1043",
+      "type": "incident",
+      "system": "label-printer-l2",
+      "urgency": "P3",
+      "team": "servicedesk",
+      "status": "open",
+      "summary": "Line 2 label printer prints every second label blank",
+      "description": "Zebra on Line 2 prints alternating blank labels since this morning. Ribbon was replaced yesterday by the night shift.",
+      "reporter": "Kasia Mazur",
+      "created_at": "2026-09-11T07:30:00+02:00",
+      "updated_at": "2026-09-11T07:30:00+02:00",
+      "updates": []
+    },
+    {
+      "id": "INC-1040",
+      "type": "incident",
+      "system": "wifi-coldstore",
+      "urgency": "P3",
+      "team": "infra",
+      "status": "resolved",
+      "summary": "Handheld scanners drop Wi-Fi in cold store B, aisle 4",
+      "description": "Scanners lose connection in aisle 4 of cold store B for 20-30 s at a time. Started after new racking was installed.",
+      "reporter": "Grzegorz Kaczmarek",
+      "created_at": "2026-09-08T09:12:00+02:00",
+      "updated_at": "2026-09-09T15:30:00+02:00",
+      "updates": [
+        {"at": "2026-09-09T15:30:00+02:00", "author": "Anna Kowalczyk", "text": "AP-CS-B4 moved 3 m towards aisle 4 and re-surveyed. Resolved — reopen if it comes back."}
+      ]
+    },
+    {
+      "id": "REQ-2201",
+      "type": "access_request",
+      "system": "vpn",
+      "urgency": "P3",
+      "team": "infra",
+      "status": "open",
+      "summary": "VPN access for new quality technician (Ewa Sikora)",
+      "description": "Ewa Sikora starts Monday in Quality and needs remote access to the LIMS reports. Badge 20477. Manager approval attached.",
+      "reporter": "Joanna Krawczyk",
+      "created_at": "2026-09-09T11:05:00+02:00",
+      "updated_at": "2026-09-09T11:05:00+02:00",
+      "updates": []
+    },
+    {
+      "id": "CHG-0310",
+      "type": "change_request",
+      "system": "mes-packing",
+      "urgency": "P3",
+      "team": "apps",
+      "status": "open",
+      "summary": "Install MES vendor hotfix 7.4.2 on NF-SRV-MES-01",
+      "description": "Vendor hotfix for the batch-order timeout. Proposed window: Sunday 21 Sep, 22:00-23:30, between production runs. Rollback: VM snapshot.",
+      "reporter": "Agnieszka Dąbrowska",
+      "created_at": "2026-09-10T16:20:00+02:00",
+      "updated_at": "2026-09-10T16:20:00+02:00",
+      "updates": []
+    },
+    {
+      "id": "Q-0512",
+      "type": "question",
+      "system": "vpn",
+      "urgency": "P4",
+      "team": "servicedesk",
+      "status": "open",
+      "summary": "Which VPN portal address is the right one? Wiki has three pages",
+      "description": "I found three VPN setup pages on Nordwiki and they give different portal addresses. Which one should I use from home?",
+      "reporter": "Paweł Grabowski",
+      "created_at": "2026-09-11T08:02:00+02:00",
+      "updated_at": "2026-09-11T08:02:00+02:00",
+      "updates": []
+    }
+  ]
+}
