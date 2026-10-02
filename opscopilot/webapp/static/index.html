@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+    // Served under /proxy/8000/ on our code-server machines: every URL on this page is relative, and a
+    // missing trailing slash would make them resolve one level too high — so add it first.
+    if (!location.pathname.endsWith('/')) location.replace(location.pathname + '/' + location.search);
+  </script>
+  <title>OpsCopilot</title>
+  <link rel="stylesheet" href="static/app.css">
+  <link rel="stylesheet" href="static/theme.css"><!-- last, so your rules win -->
+</head>
+<body>
+  <header>
+    <span class="logo" id="logo"></span>
+    <h1 id="name">OpsCopilot</h1>
+    <span class="sub" id="tagline"></span>
+    <button type="button" id="newconv">Nowa rozmowa</button>
+  </header>
+  <main>
+    <section class="chat">
+      <div id="log"><div class="welcome" id="welcome"></div></div>
+      <form id="f">
+        <input id="q" autocomplete="off" required>
+        <button type="submit" class="primary">Zapytaj</button>
+      </form>
+    </section>
+    <aside>
+      <h2>Co zrobił system</h2>
+      <div class="hint">Kliknij odpowiedź, żeby zobaczyć jej ślad: kontrolę zakresu, wybór narzędzia, wywołania narzędzi, redakcje, wywołania modelu z tokenami i kosztem. Ślad pochodzi z dziennika audytu, nie z relacji modelu.</div>
+      <div id="trace"></div>
+    </aside>
+  </main>
+  <script>
+    const log = document.getElementById('log');
+    const tracePanel = document.getElementById('trace');
+    let session = crypto.randomUUID();
+    document.getElementById('newconv').addEventListener('click', () => {
+      session = crypto.randomUUID(); log.querySelectorAll('.msg').forEach(m => m.remove()); tracePanel.innerHTML = '';
+    });
+
+
+    // Texts come from static/branding.json (yours). A broken file falls back to the defaults.
+    fetch('static/branding.json').then(r => r.json()).then(b => {
+      const set = (id, v) => { if (v) document.getElementById(id).textContent = v; };
+      if (b.name) document.title = b.name;
+      set('name', b.name); set('tagline', b.tagline); set('logo', b.logo); set('welcome', b.welcome);
+      if (b.placeholder) document.getElementById('q').placeholder = b.placeholder;
+    }).catch(err => console.warn('branding.json could not be read — using defaults:', err));
+
+    function esc(s) { return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+    function describe(e) {
+      const k = e.kind;
+      if (k === 'model_call') return `model <code>${esc(e.step)}</code>${e.tool ? ' → <code>' + esc(e.tool) + '</code>' : ''} · ${e.input_tokens ?? 0}/${e.output_tokens ?? 0} tok · $${(e.cost_usd ?? 0).toFixed(4)}`;
+      if (k === 'tool_call') return `tool <code>${esc(e.tool)}</code> ${esc(JSON.stringify(e.args ?? {}))}`;
+      if (k === 'scope') return `scope ${e.allowed ? 'allowed' : '<b>denied</b>'} (${esc(e.method)}: ${esc(e.reason)})`;
+      if (k === 'refusal') return `<b>refused</b> (${esc(e.method)}: ${esc(e.reason)})`;
+      if (k === 'redaction') return `redacted ${esc(e.where)}: ${esc(JSON.stringify(e.findings))}`;
+      if (k === 'injection') return `injection <code>${esc(e.marker)}</code> removed from ${esc(e.where)}`;
+      if (k === 'refetch') return `refetch override → <code>${esc(e.tool)}</code>`;
+      if (k === 'approval') return `approval ${esc(e.action)}: <b>${e.approved ? 'yes' : 'NO'}</b> (${esc(e.how)})`;
+      if (k === 'loop') return `loop stopped: <b>${esc(e.stop)}</b> after ${e.tool_calls} tool call(s)`;
+      if (k === 'answer') {
+        const label = {docs: e.grounded ? 'grounded' : 'from docs, no citations', tools: 'from tool results', memory: 'from memory (no lookup)', chat: 'chat (no lookup)'}[e.mode] || (e.grounded ? 'grounded' : 'not grounded');
+        return `answer · ${label}${e.citations && e.citations.length ? ' · cites ' + esc(e.citations.join(', ')) : ''}`;
+      }
+      return esc(k);
+    }
+
+    function renderTrace(turn) {
+      if (!turn.trace.length) { tracePanel.innerHTML = '<div class="hint">Ta wersja aplikacji nie zapisuje jeszcze śladu.</div>'; return; }
+      const items = turn.trace.map(e => `<li class="${esc(e.kind === 'model_call' ? 'model' : e.kind === 'tool_call' ? 'tool' : e.kind)}"><span class="ms">${String(e.ms ?? 0).padStart(5)} ms</span>${describe(e)}</li>`).join('');
+      const tin = turn.trace.reduce((a, e) => a + (e.input_tokens || 0), 0);
+      const tout = turn.trace.reduce((a, e) => a + (e.output_tokens || 0), 0);
+      const cost = turn.trace.reduce((a, e) => a + (e.cost_usd || 0), 0);
+      const ms = turn.trace.length ? (turn.trace[turn.trace.length - 1].ms || 0) : 0;
+      tracePanel.innerHTML = `<div class="hint">turn <code>${esc(turn.turn_id)}</code></div><ol class="trace">${items}</ol>
+        <div class="totals">${tin}/${tout} tokens · $${cost.toFixed(4)} · ${ms} ms · ${turn.trace.filter(e => e.kind === 'tool_call').length} tool call(s)</div>`;
+      document.querySelectorAll('.msg.bot').forEach(el => el.classList.toggle('selected', el.dataset.turn === turn.turn_id));
+    }
+
+    const turns = {};
+    document.getElementById('f').addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      const q = document.getElementById('q').value;
+      log.insertAdjacentHTML('beforeend', `<div class="msg user">${esc(q)}</div><div class="msg bot">…</div>`);
+      const slot = log.lastElementChild;
+      log.scrollTop = log.scrollHeight;
+      document.getElementById('q').value = '';
+      try {
+        const r = await fetch('ask', { method: 'POST', headers: {'Content-Type': 'application/json'},
+                                        body: JSON.stringify({question: q, session_id: session}) });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.detail ? JSON.stringify(data.detail) : r.status);
+        turns[data.turn_id] = data;
+        const cost = data.trace.reduce((a, e) => a + (e.cost_usd || 0), 0);
+        const tools = data.trace.filter(e => e.kind === 'tool_call').map(e => e.tool);
+        slot.textContent = data.answer;
+        slot.dataset.turn = data.turn_id;
+        // no trace yet (this version does not record one): say so instead of a misleading $0.0000
+        const meta = data.trace.length
+          ? `${tools.length ? 'tools: ' + esc(tools.join(', ')) + ' · ' : ''}$${cost.toFixed(4)} · kliknij, by zobaczyć ślad`
+          : 'koszt i ślad: ta wersja jeszcze ich nie zapisuje';
+        slot.insertAdjacentHTML('beforeend', `<span class="meta">${meta}</span>`);
+        slot.addEventListener('click', () => renderTrace(turns[data.turn_id]));
+        renderTrace(data);
+      } catch (err) {
+        slot.textContent = 'Błąd: ' + err;
+      }
+      log.scrollTop = log.scrollHeight;
+    });
+  </script>
+</body>
+</html>
